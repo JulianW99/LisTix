@@ -1,26 +1,27 @@
 {
-  "name": "backend",
+  "name": "ticket-admin-mvp-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Backend for the Ticket Admin MVP",
+  "type": "module",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/index.ts"
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "node-fetch": "^3.3.2",
     "pg": "^8.22.0"
   },
-  "devDependencies": {
-    "@types/express": "^5.0.6",
-    "@types/node": "^26.0.1",
-    "@types/pg": "^8.20.0",
-    "tsx": "^4.22.4",
-    "typescript": "^6.0.3"
+  "engines": {
+    "node": ">=16.16.0"
   }
 }
