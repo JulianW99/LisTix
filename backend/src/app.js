@@ -6,6 +6,13 @@ import routes from "./routes/index.js";
 
 const app = express();
 
+const allowedProductionOrigins = new Set(
+  (process.env.CORS_ORIGINS || process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+);
+
 const isAllowedDevelopmentOrigin = (origin) => {
   if (!origin) {
     return true;
@@ -18,6 +25,9 @@ const isAllowedDevelopmentOrigin = (origin) => {
       hostname === "localhost" ||
       hostname === "127.0.0.1" ||
       hostname === "::1" ||
+      hostname.endsWith(".vercel.app") ||
+      hostname === "vercel.app" ||
+      allowedProductionOrigins.has(origin) ||
       /^10(?:\.\d{1,3}){3}$/.test(hostname) ||
       /^192\.168(?:\.\d{1,3}){2}$/.test(hostname) ||
       /^172\.(1[6-9]|2\d|3[0-1])(?:\.\d{1,3}){2}$/.test(hostname)

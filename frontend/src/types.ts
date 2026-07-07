@@ -18,11 +18,23 @@ export type ProfileSettings = {
   payoutMethod: string;
   payoutAccountHolder: string;
   payoutIban: string;
+  payoutBic: string;
   payoutBankName: string;
+  revolutRevtag: string;
   paymentCardBrand: string;
+  paymentCardNumber: string;
+  paymentCardCvv: string;
+  paymentCardExpiryMonth: string;
+  paymentCardExpiryYear: string;
   paymentCardLast4: string;
   paymentCardExpiry: string;
   pushoverUserKey: string;
+  sheetsGoogleAccount: string;
+  sheetsDocumentUrl: string;
+  sheetsConfirmationMode: string;
+  tikeyConnected: boolean;
+  ticketmasterAccountsCsv: string;
+  axsAccountsCsv: string;
 };
 
 export type DashboardData = {
