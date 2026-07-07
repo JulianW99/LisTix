@@ -115,9 +115,10 @@ const dateFormatter = new Intl.DateTimeFormat("en-GB", {
 });
 
 const dayInMs = 1000 * 60 * 60 * 24;
-const trendChartWidth = 720;
+const trendChartWidth = 1320;
 const trendChartHeight = 220;
 const trendChartPadding = 34;
+const trendChartXPadding = 0;
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const defaultCreateListingForm: CreateListingFormState = {
@@ -282,10 +283,11 @@ const buildTrendChart = (trend: DashboardData["monthlyTrend"]) => {
 
   const points = calendarTrend.map((point, index) => {
     const usableHeight = trendChartHeight - trendChartPadding * 2;
+    const usableWidth = trendChartWidth - trendChartXPadding * 2;
     const x =
       calendarTrend.length === 1
         ? trendChartWidth / 2
-        : ((index + 0.5) * trendChartWidth) / calendarTrend.length;
+        : trendChartXPadding + ((index + 0.5) * usableWidth) / calendarTrend.length;
     const y = trendChartHeight - trendChartPadding - (point.sales / maxSales) * usableHeight;
 
     return {
@@ -341,13 +343,11 @@ const getPlatformStatuses = (ticket: TicketItem) => {
   const primaryPlatform = getTicketPlatform(ticket);
 
   return marketplaceNames.map((platform, index) => {
-    let status = "Not Synced";
+    let status = (ticket.databaseId + index) % 5 === 0 ? "Not Synced" : "Synced";
 
-    if (platform === primaryPlatform && ticket.marketplaceStatus !== "Draft") {
-      status = "Synced";
-    }
-
-    if (platform !== primaryPlatform && ticket.marketplaceStatus !== "Draft" && (ticket.databaseId + index) % 9 === 0) {
+    if (ticket.marketplaceStatus === "Draft") {
+      status = "Not Synced";
+    } else if (platform !== primaryPlatform && (ticket.databaseId + index) % 11 === 0) {
       status = "Error";
     }
 
@@ -383,6 +383,7 @@ const getLowestPriceInfo = (ticket: TicketItem) => {
     marketplaceRows,
     sectionLowestCount,
     platformLowestCount,
+    lastSyncedAt: `${2 + (ticket.databaseId % 14)} min ago`,
   };
 };
 
@@ -406,12 +407,31 @@ const getRestrictionLabel = (ticket: TicketItem) => {
 };
 
 const getBuyerName = (order: SoldOrder) => {
-  if (order.customerName && order.customerName.trim().includes(" ")) {
-    return order.customerName;
-  }
-
   const firstNames = ["Jamie", "Riley", "Morgan", "Alex", "Casey", "Taylor", "Jordan", "Sam"];
   const lastNames = ["Wilson", "Keller", "Parker", "Turner", "Bennett", "Nolan", "Lopez", "Reed"];
+  const lastNameByFirstName: Record<string, string> = {
+    Alex: "Turner",
+    Casey: "Bennett",
+    Jamie: "Wilson",
+    Jordan: "Lopez",
+    Morgan: "Parker",
+    Riley: "Keller",
+    Sam: "Reed",
+    Taylor: "Nolan",
+  };
+
+  if (order.customerName) {
+    const [firstName, lastName] = order.customerName.trim().split(/\s+/);
+
+    if (firstName && lastName && !lastName.includes(".") && lastName.length > 2) {
+      return `${firstName} ${lastName}`;
+    }
+
+    if (firstName) {
+      return `${firstName} ${lastNameByFirstName[firstName] ?? lastNames[order.databaseId % lastNames.length]}`;
+    }
+  }
+
   const index = order.databaseId % firstNames.length;
 
   return `${firstNames[index]} ${lastNames[index]}`;
@@ -490,6 +510,7 @@ function App() {
   const [ticketLinks, setTicketLinks] = useState([""]);
   const [pdfFileName, setPdfFileName] = useState("");
   const [screenshotFileName, setScreenshotFileName] = useState("");
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState("");
   const [copyMessage, setCopyMessage] = useState("");
   const [supportDraftOrder, setSupportDraftOrder] = useState<SoldOrder | null>(null);
   const [supportDraftMessage, setSupportDraftMessage] = useState("");
@@ -1069,6 +1090,7 @@ function App() {
     setTicketLinks([""]);
     setPdfFileName("");
     setScreenshotFileName("");
+    setScreenshotPreviewUrl("");
     setCopyMessage("");
   };
 
@@ -1077,6 +1099,7 @@ function App() {
     setTicketLinks([""]);
     setPdfFileName("");
     setScreenshotFileName("");
+    setScreenshotPreviewUrl("");
     setCopyMessage("");
   };
 
@@ -1087,7 +1110,20 @@ function App() {
     }
 
     try {
-      await navigator.clipboard.writeText(value);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(value);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = value;
+        textArea.setAttribute("readonly", "");
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+      }
+
       setCopyMessage(`${label} copied.`);
     } catch (clipboardError) {
       console.error("Unable to copy buyer detail:", clipboardError);
@@ -1105,6 +1141,7 @@ function App() {
     }
 
     setScreenshotFileName(imageFile.name || "Clipboard screenshot");
+    setScreenshotPreviewUrl(URL.createObjectURL(imageFile));
   };
 
   const updateTicketLink = (index: number, value: string) => {
@@ -1281,27 +1318,27 @@ function App() {
               </div>
               <div className="hero-stats">
                 <div>
-                  <span>Total Inventory</span>
+                  <span>Total Inventory 🎟️</span>
                   <strong>{dashboard?.ticketsInInventory ?? 0}</strong>
                 </div>
                 <div>
-                  <span>Live Listings</span>
+                  <span>Live Listings 📈</span>
                   <strong>{dashboard?.listedTickets ?? 0}</strong>
                 </div>
                 <div>
-                  <span>Sold Tickets</span>
+                  <span>Sold Tickets 💰</span>
                   <strong>{dashboard?.soldTickets ?? 0}</strong>
                 </div>
                 <div>
-                  <span>Average ROI</span>
+                  <span>Average ROI 💸</span>
                   <strong>{dashboard?.averageRoi.toFixed(1) ?? 0}%</strong>
                 </div>
                 <div>
-                  <span>Pending Payouts</span>
+                  <span>Pending Payouts ⏳</span>
                   <strong>{currency.format(dashboard?.pendingPayout ?? 0)}</strong>
                 </div>
                 <div>
-                  <span>Profit</span>
+                  <span>Profit 🤑</span>
                   <strong>{currency.format(dashboard?.profit ?? 0)}</strong>
                 </div>
               </div>
@@ -1328,8 +1365,8 @@ function App() {
                     {[0.25, 0.5, 0.75].map((ratio) => (
                       <line
                         key={ratio}
-                        x1={trendChartPadding}
-                        x2={trendChartWidth - trendChartPadding}
+                        x1={0}
+                        x2={trendChartWidth}
                         y1={trendChartPadding + (trendChartHeight - trendChartPadding * 2) * ratio}
                         y2={trendChartPadding + (trendChartHeight - trendChartPadding * 2) * ratio}
                         className="trend-grid-line"
@@ -1421,11 +1458,13 @@ function App() {
                         <span>{dateFormatter.format(new Date(order.eventDate))}</span>
                       </div>
                       <div>
+                        <strong>{order.quantity} tickets</strong>
+                      </div>
+                      <div>
                         <strong>{order.section}</strong>
                         <span className={`status-pill ${getStatusTone(getSoldDisplayStatus(order))}`}>
                           {getSoldDisplayStatus(order)}
                         </span>
-                        <span>{order.quantity} tickets</span>
                       </div>
                     </div>
                   ))}
@@ -1828,7 +1867,6 @@ function App() {
                       <th>Qty</th>
                       <th>Face Value</th>
                       <th>Ask</th>
-                      <th>Restrictions</th>
                       <th>Platform Status</th>
                       <th></th>
                     </tr>
@@ -1869,8 +1907,8 @@ function App() {
                               {askDrafts[ticket.id] !== undefined &&
                               Number(askDrafts[ticket.id]) !== ticket.askingPrice ? (
                                 <div className="price-edit-actions">
-                                  <button type="button" onClick={() => confirmListingAsk(ticket.id)}>
-                                    OK
+                                  <button className="confirm-price-button" type="button" onClick={() => confirmListingAsk(ticket.id)}>
+                                    ✓
                                   </button>
                                   <button type="button" onClick={() => resetListingAsk(ticket.id)}>
                                     x
@@ -1895,11 +1933,14 @@ function App() {
                                     </span>
                                   </div>
                                 ))}
+                                <div className="lowest-sync-time">
+                                  <strong>Last synced</strong>
+                                  <span>{priceInfo.lastSyncedAt}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td>{getRestrictionLabel(ticket)}</td>
                         <td>
                           <div className="platform-status-stack">
                             {getPlatformStatuses(ticket).map((platformStatus) => (
@@ -2537,29 +2578,11 @@ function App() {
                 <div className="detail-grid compact-detail-grid">
                   <div>
                     <span>Name</span>
-                    <strong className="copyable-value">
-                      {getBuyerName(selectedSoldOrder)}
-                      <button
-                        className="copy-icon-button"
-                        type="button"
-                        onClick={() => void copyBuyerValue("Name", getBuyerName(selectedSoldOrder))}
-                      >
-                        Copy
-                      </button>
-                    </strong>
+                    <strong>{getBuyerName(selectedSoldOrder)}</strong>
                   </div>
                   <div>
                     <span>Mail</span>
-                    <strong className="copyable-value">
-                      {getBuyerEmail(selectedSoldOrder)}
-                      <button
-                        className="copy-icon-button"
-                        type="button"
-                        onClick={() => void copyBuyerValue("Mail", getBuyerEmail(selectedSoldOrder))}
-                      >
-                        Copy
-                      </button>
-                    </strong>
+                    <strong>{getBuyerEmail(selectedSoldOrder)}</strong>
                   </div>
                 </div>
                 {getSoldDisplayStatus(selectedSoldOrder) !== "Delivered" ? (
@@ -2600,8 +2623,9 @@ function App() {
                       className="copy-icon-button"
                       type="button"
                       onClick={() => void copyBuyerValue("Name", getBuyerName(sendSoldOrder))}
+                      aria-label="Copy buyer name"
                     >
-                      Copy
+                      ⧉
                     </button>
                   </strong>
                 </div>
@@ -2613,8 +2637,9 @@ function App() {
                       className="copy-icon-button"
                       type="button"
                       onClick={() => void copyBuyerValue("Mail", getBuyerEmail(sendSoldOrder))}
+                      aria-label="Copy buyer email"
                     >
-                      Copy
+                      ⧉
                     </button>
                   </strong>
                 </div>
@@ -2651,25 +2676,20 @@ function App() {
               </div>
               {sendDeliveryType === "mobile" ? (
                 <div className="send-method-panel">
-                  <div className="copy-actions">
-                    <button type="button" onClick={() => void copyBuyerValue("Name", getBuyerName(sendSoldOrder))}>
-                      Copy name
-                    </button>
-                    <button type="button" onClick={() => void copyBuyerValue("Mail", getBuyerEmail(sendSoldOrder))}>
-                      Copy mail
-                    </button>
-                  </div>
                   {copyMessage ? <p className="field-help">{copyMessage}</p> : null}
                   <div className="paste-upload-zone" tabIndex={0} onPaste={handleScreenshotPaste}>
                     <strong>{screenshotFileName || "Paste screenshot here"}</strong>
                     <span>Focus this field and press Ctrl + V.</span>
+                    {screenshotPreviewUrl ? (
+                      <img className="screenshot-preview" src={screenshotPreviewUrl} alt="Clipboard screenshot preview" />
+                    ) : null}
                   </div>
                 </div>
               ) : null}
               {sendDeliveryType === "pdf" ? (
                 <div className="send-method-panel">
                   <label className="file-upload-field">
-                    <span>PDF file</span>
+                    <span>Upload file</span>
                     <input
                       type="file"
                       accept="application/pdf"

@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+import { bootstrapDatabase } from "./db/bootstrap.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import routes from "./routes/index.js";
 
@@ -52,6 +53,28 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+
+let vercelBootstrapPromise;
+
+if (process.env.VERCEL === "1") {
+  app.use(async (req, res, next) => {
+    if (req.path === "/api/health") {
+      return next();
+    }
+
+    vercelBootstrapPromise ??= bootstrapDatabase();
+
+    try {
+      await vercelBootstrapPromise;
+      return next();
+    } catch (error) {
+      console.error("Database bootstrap failed on Vercel:", error);
+      return res.status(500).json({
+        message: "Database connection failed. Check DATABASE_URL and database access in Vercel.",
+      });
+    }
+  });
+}
 
 app.use("/api", routes);
 app.use(errorHandler);

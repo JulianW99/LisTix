@@ -42,11 +42,19 @@ const request = async (endpoint: string, options: ApiRequestOptions = {}) => {
   const response = await fetch(buildApiUrl(endpoint), config);
 
   if (!response.ok) {
-    // Try to parse a JSON error message from the backend, otherwise use status text
-    const errorData = await response.json().catch(() => ({
-      message: response.statusText,
-    }));
-    const error = new Error(errorData.message || "An API error occurred");
+    const rawErrorBody = await response.text().catch(() => "");
+    let errorMessage = response.statusText || "An API error occurred";
+
+    if (rawErrorBody) {
+      try {
+        const parsedError = JSON.parse(rawErrorBody);
+        errorMessage = parsedError.message || errorMessage;
+      } catch {
+        errorMessage = rawErrorBody.slice(0, 240);
+      }
+    }
+
+    const error = new Error(`${response.status} ${endpoint}: ${errorMessage}`);
     throw error;
   }
 

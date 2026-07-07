@@ -929,6 +929,11 @@ th {
   color: #9be7b0;
 }
 
+.price-edit-actions .confirm-price-button {
+  background: rgba(52, 168, 83, 0.18);
+  color: #9be7b0;
+}
+
 .price-edit-actions button:last-child {
   color: #ffb0b0;
 }
@@ -981,6 +986,12 @@ th {
   gap: 2px;
 }
 
+.lowest-sync-time {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .inline-report-row td {
   padding: 0 10px 18px;
   background: rgba(255, 255, 255, 0.025);
@@ -1003,13 +1014,17 @@ th {
 }
 
 .copy-icon-button {
+  display: inline-grid;
+  place-items: center;
   flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 9px;
-  padding: 5px 8px;
+  border-radius: 999px;
+  padding: 0;
   background: rgba(255, 255, 255, 0.06);
   color: #f7f0de;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
@@ -1238,6 +1253,15 @@ th {
 .paste-upload-zone:focus {
   outline: 2px solid rgba(248, 184, 78, 0.6);
   outline-offset: 2px;
+}
+
+.screenshot-preview {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .file-upload-field,
