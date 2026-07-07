@@ -80,6 +80,22 @@ const soldOrderSelectSql = `
     so.order_code,
     so.ticket_id,
     t.ticket_code,
+    t.quantity,
+    t.purchase_price,
+    t.asking_price,
+    t.row_label,
+    t.lowest_seat,
+    t.section_id,
+    ss.name AS section_name,
+    CASE
+      WHEN t.lowest_seat IS NULL THEN ss.seat_label
+      WHEN t.quantity = 1 THEN t.lowest_seat::text
+      ELSE t.lowest_seat::text || '-' || (t.lowest_seat + t.quantity - 1)::text
+    END AS seat_label,
+    e.event_name,
+    e.event_date,
+    v.name AS venue_name,
+    v.city AS venue_city,
     so.buyer_channel_id,
     bc.name AS buyer_channel_name,
     so.dispatch_status_id,
@@ -92,6 +108,9 @@ const soldOrderSelectSql = `
     so.updated_at
   FROM sold_orders so
   INNER JOIN tickets t ON t.id = so.ticket_id
+  INNER JOIN events e ON e.id = t.event_id
+  INNER JOIN venues v ON v.id = e.venue_id
+  INNER JOIN seat_sections ss ON ss.id = t.section_id
   INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
   INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
 `;
@@ -102,13 +121,34 @@ export const mapSoldOrderRow = (row) => ({
   orderCode: row.order_code,
   ticketDatabaseId: Number(row.ticket_id),
   ticketId: row.ticket_code,
+  ticketCode: row.ticket_code,
+  eventName: row.event_name,
+  eventDate: row.event_date,
+  venueName: row.venue_name,
+  venueCity: row.venue_city,
+  sectionId: Number(row.section_id),
+  section: row.section_name,
+  rowLabel: row.row_label,
+  lowestSeat: row.lowest_seat === null ? null : Number(row.lowest_seat),
+  seatLabel: row.seat_label,
+  quantity: Number(row.quantity),
+  purchasePrice: toNumber(row.purchase_price),
+  askingPrice: toNumber(row.asking_price),
   buyerChannelId: Number(row.buyer_channel_id),
   buyerChannel: row.buyer_channel_name,
   dispatchStatusId: Number(row.dispatch_status_id),
   dispatchStatus: row.dispatch_status_name,
   dispatchComplete: Boolean(row.is_terminal),
   soldAt: row.sold_at,
+  payoutAt: row.sold_at,
   payoutAmount: toNumber(row.payout_amount),
+  profit: toNumber(row.payout_amount) - toNumber(row.purchase_price) * Number(row.quantity),
+  roi:
+    toNumber(row.purchase_price) > 0
+      ? ((toNumber(row.payout_amount) - toNumber(row.purchase_price) * Number(row.quantity)) /
+          (toNumber(row.purchase_price) * Number(row.quantity))) *
+        100
+      : 0,
   customerName: row.customer_name,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -452,7 +492,13 @@ export const listSoldOrders = async () => {
 };
 
 export const getTicketInputOptions = async () => {
-  const [eventsResult, sectionsResult, statusesResult, restrictionsResult] = await Promise.all([
+  const [
+    eventsResult,
+    sectionsResult,
+    statusesResult,
+    restrictionsResult,
+    dispatchStatusesResult,
+  ] = await Promise.all([
     pool.query(`
       SELECT
         e.id,
@@ -499,6 +545,18 @@ export const getTicketInputOptions = async () => {
         END,
         name ASC
     `),
+    pool.query(`
+      SELECT id, name, is_terminal
+      FROM dispatch_statuses
+      ORDER BY
+        CASE name
+          WHEN 'Awaiting transfer' THEN 1
+          WHEN 'Ready to send' THEN 2
+          WHEN 'Completed' THEN 3
+          ELSE 4
+        END,
+        name ASC
+    `),
   ]);
 
   return {
@@ -524,64 +582,99 @@ export const getTicketInputOptions = async () => {
       id: Number(row.id),
       name: row.name,
     })),
+    dispatchStatuses: dispatchStatusesResult.rows.map((row) => ({
+      id: Number(row.id),
+      name: row.name,
+      isTerminal: Boolean(row.is_terminal),
+    })),
   };
 };
 
 export const getDashboardSnapshot = async () => {
-  const summaryResult = await pool.query(`
-    SELECT
-      COALESCE((SELECT SUM(payout_amount) FROM sold_orders), 0)::float AS gross_sales,
-      (
-        SELECT COUNT(*)::int
+  const [summaryResult, trendResult, platformResult] = await Promise.all([
+    pool.query(`
+      WITH sold_ticket_costs AS (
+        SELECT
+          so.id,
+          so.payout_amount,
+          t.purchase_price * t.quantity AS total_purchase_price,
+          ds.is_terminal
         FROM sold_orders so
+        INNER JOIN tickets t ON t.id = so.ticket_id
         INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
-        WHERE ds.is_terminal = FALSE
-      ) AS pending_dispatch,
-      (
-        SELECT COUNT(*)::int
-        FROM tickets t
-        INNER JOIN marketplace_statuses ms ON ms.id = t.marketplace_status_id
-        WHERE ms.name = 'Listed'
-      ) AS active_listings,
-      COALESCE((SELECT SUM(quantity) FROM tickets), 0)::int AS tickets_in_inventory
-  `);
-
-  const yearResult = await pool.query(`
-    SELECT
-      COALESCE(
-        EXTRACT(YEAR FROM MAX(sold_at))::int,
-        EXTRACT(YEAR FROM NOW())::int
-      ) AS sales_year,
-      COALESCE(EXTRACT(MONTH FROM MAX(sold_at))::int, 6) AS max_month
-    FROM sold_orders
-  `);
-  const salesYear = Number(yearResult.rows[0].sales_year);
-  const monthCount = Math.max(6, Number(yearResult.rows[0].max_month));
-  const trendResult = await pool.query(
-    `
+      )
       SELECT
-        EXTRACT(MONTH FROM sold_at)::int AS sales_month,
-        SUM(payout_amount)::float AS sales
-      FROM sold_orders
-      WHERE EXTRACT(YEAR FROM sold_at)::int = $1
+        (SELECT COUNT(*)::int FROM tickets WHERE marketplace_status_id = (SELECT id FROM marketplace_statuses WHERE name = 'Listed')) AS listed_tickets,
+        (SELECT COUNT(*)::int FROM sold_orders) AS sold_tickets,
+        COALESCE(SUM(payout_amount), 0)::float AS total_payout,
+        COALESCE(SUM(CASE WHEN is_terminal = TRUE THEN payout_amount ELSE 0 END), 0)::float AS payout_received,
+        COALESCE(SUM(total_purchase_price), 0)::float AS cost_of_sold_tickets,
+        COALESCE((SELECT SUM(quantity) FROM tickets), 0)::int AS tickets_in_inventory
+      FROM sold_ticket_costs
+    `),
+    pool.query(`
+      SELECT
+          EXTRACT(MONTH FROM so.sold_at)::int AS sales_month,
+          SUM(so.payout_amount)::float AS sales,
+          SUM(t.purchase_price * t.quantity)::float AS cost,
+          SUM(so.payout_amount - (t.purchase_price * t.quantity))::float AS profit
+      FROM sold_orders so
+      INNER JOIN tickets t ON t.id = so.ticket_id
+      WHERE EXTRACT(YEAR FROM so.sold_at)::int = EXTRACT(YEAR FROM NOW())::int
       GROUP BY sales_month
       ORDER BY sales_month ASC
-    `,
-    [salesYear],
-  );
-  const salesByMonth = trendResult.rows.reduce((result, row) => {
-    result[Number(row.sales_month)] = Number(row.sales);
-    return result;
+    `),
+    pool.query(`
+      SELECT
+        bc.name,
+        COUNT(so.id)::int AS count
+      FROM sold_orders so
+      INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
+      GROUP BY bc.name
+      ORDER BY count DESC
+    `),
+  ]);
+
+  const summary = summaryResult.rows[0] || {};
+  const totalPayout = toNumber(summary.total_payout) || 0;
+  const costOfSoldTickets = toNumber(summary.cost_of_sold_tickets) || 0;
+  const profit = totalPayout - costOfSoldTickets;
+  const averageRoi = costOfSoldTickets > 0 ? (profit / costOfSoldTickets) * 100 : 0;
+
+  const salesByMonth = (trendResult.rows || []).reduce((acc, row) => {
+    const sales = toNumber(row.sales) || 0;
+    const cost = toNumber(row.cost) || 0;
+    const profitByMonth = toNumber(row.profit) || 0;
+    acc[Number(row.sales_month)] = {
+      sales,
+      cost,
+      profit: profitByMonth,
+      averageRoi: cost > 0 ? (profitByMonth / cost) * 100 : 0,
+    };
+    return acc;
   }, {});
 
   return {
-    grossSales: Number(summaryResult.rows[0].gross_sales),
-    pendingDispatch: Number(summaryResult.rows[0].pending_dispatch),
-    activeListings: Number(summaryResult.rows[0].active_listings),
-    ticketsInInventory: Number(summaryResult.rows[0].tickets_in_inventory),
-    monthlyTrend: Array.from({ length: Math.min(monthCount, 12) }, (_entry, index) => ({
+    // New Stats
+    listedTickets: toNumber(summary.listed_tickets) || 0,
+    soldTickets: toNumber(summary.sold_tickets) || 0,
+    profit: profit,
+    payoutReceived: toNumber(summary.payout_received) || 0,
+    pendingPayout: totalPayout - (toNumber(summary.payout_received) || 0),
+    salesByPlatform: (platformResult.rows || []).map((row) => ({
+      name: row.name,
+      count: Number(row.count),
+    })),
+    averageRoi: averageRoi,
+
+    // Original stats that might still be useful
+    grossSales: totalPayout,
+    ticketsInInventory: toNumber(summary.tickets_in_inventory) || 0,
+    monthlyTrend: Array.from({ length: 12 }, (_entry, index) => ({
       label: monthLabels[index],
-      sales: salesByMonth[index + 1] ?? 0,
+      sales: salesByMonth[index + 1]?.sales ?? 0,
+      profit: salesByMonth[index + 1]?.profit ?? 0,
+      averageRoi: salesByMonth[index + 1]?.averageRoi ?? 0,
     })),
   };
 };

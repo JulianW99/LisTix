@@ -6,6 +6,7 @@ const tickets = [
     eventDate: "2026-07-18T18:00:00.000Z",
     quantity: 2,
     purchasePrice: 189.5,
+    totalPurchasePrice: 379,
     askingPrice: 265,
     marketplaceStatus: "Draft",
     section: "Block 112",
@@ -17,6 +18,7 @@ const tickets = [
     eventDate: "2026-08-02T19:30:00.000Z",
     quantity: 4,
     purchasePrice: 122,
+    totalPurchasePrice: 488,
     askingPrice: 175,
     marketplaceStatus: "Listed",
     section: "Floor A",
@@ -28,6 +30,7 @@ const tickets = [
     eventDate: "2026-09-11T17:45:00.000Z",
     quantity: 2,
     purchasePrice: 149,
+    totalPurchasePrice: 298,
     askingPrice: 198,
     marketplaceStatus: "Needs pricing",
     section: "Block L1",
@@ -56,25 +59,74 @@ const soldOrders = [
 ];
 
 export const getDashboardSnapshot = () => {
-  const grossSales = soldOrders.reduce((sum, order) => sum + order.payoutAmount, 0);
-  const ticketsInInventory = tickets.reduce((sum, ticket) => sum + ticket.quantity, 0);
+  const soldTicketsMap = new Map(
+    soldOrders.map((order) => [order.ticketId, order]),
+  );
+  const soldTicketDetails = tickets.filter((ticket) =>
+    soldTicketsMap.has(ticket.id),
+  );
+
+  const totalPayout = soldOrders.reduce(
+    (sum, order) => sum + order.payoutAmount,
+    0,
+  );
+  const totalPurchaseCostOfSoldTickets = soldTicketDetails.reduce(
+    (sum, ticket) => sum + ticket.totalPurchasePrice,
+    0,
+  );
+
+  const profit = totalPayout - totalPurchaseCostOfSoldTickets;
+
+  const payoutReceived = soldOrders
+    .filter((order) => order.dispatchStatus === "Completed")
+    .reduce((sum, order) => sum + order.payoutAmount, 0);
+
+  const pendingPayout = totalPayout - payoutReceived;
+
+  const salesByPlatform = soldOrders.reduce((acc, order) => {
+    acc[order.buyerChannel] = (acc[order.buyerChannel] || 0) + 1;
+    return acc;
+  }, {});
+
+  const roi =
+    totalPurchaseCostOfSoldTickets > 0
+      ? (profit / totalPurchaseCostOfSoldTickets) * 100
+      : 0;
+
+  // Use real data for monthly trend
+  const monthlyTrend = soldOrders.reduce((acc, order) => {
+    const month = new Date(order.soldAt).toLocaleString("en-US", {
+      month: "short",
+    });
+    if (!acc[month]) {
+      acc[month] = { label: month, sales: 0 };
+    }
+    acc[month].sales += order.payoutAmount;
+    return acc;
+  }, {});
 
   return {
-    grossSales,
+    // New Stats
+    listedTickets: tickets.filter(
+      (ticket) => ticket.marketplaceStatus === "Listed",
+    ).length,
+    soldTickets: soldOrders.length,
+    profit,
+    payoutReceived,
+    pendingPayout,
+    salesByPlatform: Object.entries(salesByPlatform).map(([name, count]) => ({
+      name,
+      count,
+    })),
+    averageRoi: roi,
+
+    // Original stats that might still be useful
+    grossSales: totalPayout, // Renamed from grossSales
+    ticketsInInventory: tickets.reduce((sum, ticket) => sum + ticket.quantity, 0),
     pendingDispatch: soldOrders.filter(
       (order) => order.dispatchStatus !== "Completed",
     ).length,
-    activeListings: tickets.filter((ticket) => ticket.marketplaceStatus === "Listed")
-      .length,
-    ticketsInInventory,
-    monthlyTrend: [
-      { label: "Jan", sales: 4200 },
-      { label: "Feb", sales: 5800 },
-      { label: "Mar", sales: 5100 },
-      { label: "Apr", sales: 7200 },
-      { label: "May", sales: 6900 },
-      { label: "Jun", sales: 8100 },
-    ],
+    monthlyTrend: Object.values(monthlyTrend),
   };
 };
 

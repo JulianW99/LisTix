@@ -15,7 +15,26 @@ const mapUser = (row) => ({
   email: row.email,
   displayName: row.display_name,
   role: row.role,
+  profileSettings: row.profile_settings ?? {},
   createdAt: row.created_at,
+});
+
+const buildProfileSettings = (input = {}) => ({
+  discordHandle: input.discordHandle ?? "",
+  discordUserId: input.discordUserId ?? "",
+  addressLine1: input.addressLine1 ?? "",
+  addressLine2: input.addressLine2 ?? "",
+  postalCode: input.postalCode ?? "",
+  city: input.city ?? "",
+  country: input.country ?? "",
+  payoutMethod: input.payoutMethod ?? "Bank transfer",
+  payoutAccountHolder: input.payoutAccountHolder ?? "",
+  payoutIban: input.payoutIban ?? "",
+  payoutBankName: input.payoutBankName ?? "",
+  paymentCardBrand: input.paymentCardBrand ?? "",
+  paymentCardLast4: input.paymentCardLast4 ?? "",
+  paymentCardExpiry: input.paymentCardExpiry ?? "",
+  pushoverUserKey: input.pushoverUserKey ?? "",
 });
 
 export const login = async (req, res, next) => {
@@ -28,7 +47,7 @@ export const login = async (req, res, next) => {
 
     const result = await pool.query(
       `
-        SELECT id, email, password_hash, display_name, role, created_at
+        SELECT id, email, password_hash, display_name, role, profile_settings, created_at
         FROM users
         WHERE email = $1
         LIMIT 1
@@ -72,7 +91,7 @@ export const me = async (req, res, next) => {
   try {
     const result = await pool.query(
       `
-        SELECT id, email, display_name, role, created_at
+        SELECT id, email, display_name, role, profile_settings, created_at
         FROM users
         WHERE id = $1
         LIMIT 1
@@ -85,6 +104,48 @@ export const me = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "User not found." });
     }
+
+    return res.json({ user: mapUser(user) });
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateMe = async (req, res, next) => {
+  try {
+    const displayName = String(req.body.displayName ?? "").trim();
+
+    if (!displayName) {
+      return res.status(400).json({ message: "Display name is required." });
+    }
+
+    const profileSettings = buildProfileSettings(req.body.profileSettings);
+    const result = await pool.query(
+      `
+        UPDATE users
+        SET display_name = $1,
+            profile_settings = $2,
+            updated_at = NOW()
+        WHERE id = $3
+        RETURNING id, email, display_name, role, profile_settings, created_at
+      `,
+      [displayName, JSON.stringify(profileSettings), req.user.sub],
+    );
+
+    const user = result.rows[0];
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const token = signSessionToken({
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      displayName: user.display_name,
+    });
+
+    res.cookie(env.cookieName, token, buildCookieOptions());
 
     return res.json({ user: mapUser(user) });
   } catch (error) {

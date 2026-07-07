@@ -11,15 +11,15 @@ const parseBoolean = (value, fallback = false) => {
 };
 
 export const env = {
-  host: process.env.HOST || "0.0.0.0",
+  host: "127.0.0.1", // Forcing the most reliable host for local development
   port: Number(process.env.PORT || 4010),
   nodeEnv: process.env.NODE_ENV || "development",
   database: {
-    host: process.env.DATABASE_HOST ?? "127.0.0.1",
-    port: Number(process.env.DATABASE_PORT || 5432),
-    database: process.env.DATABASE_NAME ?? "ticket_admin_mvp",
-    user: process.env.DATABASE_USER ?? "postgres",
-    password: process.env.DATABASE_PASSWORD ?? "postgres",
+    host: process.env.POSTGRES_HOST ?? "127.0.0.1",
+    port: Number(process.env.POSTGRES_PORT || 5432),
+    database: process.env.POSTGRES_DB ?? "ticket_admin_mvp",
+    user: process.env.POSTGRES_USER ?? "postgres",
+    password: process.env.POSTGRES_PASSWORD ?? "postgres",
     ssl: parseBoolean(process.env.DATABASE_SSL, false),
   },
   jwtSecret: process.env.JWT_SECRET || "replace-with-a-long-random-secret",

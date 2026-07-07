@@ -9,13 +9,13 @@ const start = async () => {
     await bootstrapDatabase();
 
     // 2. Then, start the HTTP server.
-    return app.listen(env.port, env.host, () => {
-      console.log(`✅ Backend listening on http://${env.host}:${env.port}`);
+    return app.listen(env.port, () => {
+      console.log(`✅ Backend listening on port ${env.port}`);
     });
   } catch (error) {
     console.error("❌ Failed to start backend");
-    if (error.code === 'ECONNREFUSED' && error.port === env.db.port) {
-      console.error(`Could not connect to PostgreSQL on port ${env.db.port}.`);
+    if (error.code === 'ECONNREFUSED' && error.port === env.database.port) {
+      console.error(`Could not connect to PostgreSQL on port ${env.database.port}.`);
       console.error("Is the database server running?");
     } else {
       console.error(error);

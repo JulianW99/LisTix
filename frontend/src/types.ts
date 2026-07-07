@@ -3,15 +3,42 @@ export type User = {
   email: string;
   displayName: string;
   role: string;
+  profileSettings: ProfileSettings;
   createdAt: string;
 };
 
+export type ProfileSettings = {
+  discordHandle: string;
+  discordUserId: string;
+  addressLine1: string;
+  addressLine2: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  payoutMethod: string;
+  payoutAccountHolder: string;
+  payoutIban: string;
+  payoutBankName: string;
+  paymentCardBrand: string;
+  paymentCardLast4: string;
+  paymentCardExpiry: string;
+  pushoverUserKey: string;
+};
+
 export type DashboardData = {
+  // New Stats
+  listedTickets: number;
+  soldTickets: number;
+  profit: number;
+  payoutReceived: number;
+  pendingPayout: number;
+  salesByPlatform: Array<{ name: string; count: number }>;
+  averageRoi: number;
+
+  // Original stats
   grossSales: number;
-  pendingDispatch: number;
-  activeListings: number;
   ticketsInInventory: number;
-  monthlyTrend: Array<{ label: string; sales: number }>;
+  monthlyTrend: Array<{ label: string; sales: number; profit: number; averageRoi: number }>;
 };
 
 export type TicketItem = {
@@ -49,14 +76,31 @@ export type SoldOrder = {
   orderCode: string;
   ticketDatabaseId: number;
   ticketId: string;
+  ticketCode: string;
+  eventName: string;
+  eventDate: string;
+  venueName: string;
+  venueCity: string;
+  sectionId: number;
+  section: string;
+  rowLabel: string;
+  lowestSeat: number | null;
+  seatLabel: string;
+  quantity: number;
+  purchasePrice: number;
+  askingPrice: number;
   buyerChannelId: number;
   buyerChannel: string;
   dispatchStatusId: number;
   soldAt: string;
+  payoutAt: string;
   payoutAmount: number;
   dispatchStatus: string;
   dispatchComplete: boolean;
+  profit: number;
+  roi: number;
   customerName: string;
+  buyerEmail?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -92,6 +136,7 @@ export type TicketInputOptions = {
   sections: TicketSectionOption[];
   marketplaceStatuses: MarketplaceStatusOption[];
   restrictions: TicketRestrictionOption[];
+  dispatchStatuses: Array<{ id: number; name: string; isTerminal: boolean }>;
 };
 
 export type CreateTicketInput = {
@@ -104,4 +149,9 @@ export type CreateTicketInput = {
   purchasePrice: number;
   askingPrice: number;
   notes?: string | null;
+};
+
+export type UpdateMeInput = {
+  displayName: string;
+  profileSettings: ProfileSettings;
 };
