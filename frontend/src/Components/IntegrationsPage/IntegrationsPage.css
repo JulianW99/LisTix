@@ -1,0 +1,4 @@
+.integration-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.integration-list article { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 16px; border: 1px solid #303840; border-radius: 7px; background: #20262c; }
+.integration-list p { margin: 7px 0; color: #a2acb5; font-size: .85rem; }
+.integration-list small { color: #7f8a95; }

@@ -24,4 +24,9 @@ export const createTicketsTableSql = `
 
   ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS lowest_seat INTEGER CHECK (lowest_seat IS NULL OR lowest_seat > 0);
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+  CREATE INDEX IF NOT EXISTS tickets_user_id_idx ON tickets(user_id);
 `;

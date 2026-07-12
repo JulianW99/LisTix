@@ -7,6 +7,67 @@ export type User = {
   createdAt: string;
 };
 
+export type SupportTopic = {
+  id: number;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type SupportMessage = {
+  id: number;
+  ticketId: number;
+  authorUserId: number;
+  authorName: string;
+  authorRole: string;
+  body: string;
+  createdAt: string;
+};
+
+export type SupportTicket = {
+  id: number;
+  ticketId: string;
+  userId: number;
+  userEmail: string;
+  userName: string;
+  topicId: number;
+  topic: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  text: string;
+  messageCount: number;
+  messages?: SupportMessage[];
+  createdAt: string;
+  updatedAt: string;
+  closedAt: string | null;
+};
+
+export type SystemUser = {
+  id: number;
+  email: string;
+  displayName: string;
+  role: string;
+  onlineTickets: number;
+  onlineTicketValue: number;
+  revenueLtm: number;
+  revenueLastMonth: number;
+  openSupportTickets: number;
+  status: "OK" | "Action required";
+  createdAt: string;
+};
+
+export type SupportDashboard = {
+  scope: "live" | "history";
+  total: number;
+  topics: Array<{ topicId: number; topic: string; count: number }>;
+};
+
+export type SupportFilters = {
+  scope: "live" | "history";
+  from?: string;
+  to?: string;
+};
+
 export type ProfileSettings = {
   discordHandle: string;
   discordUserId: string;
@@ -55,6 +116,7 @@ export type DashboardData = {
 
 export type TicketItem = {
   databaseId: number;
+  userId: number | null;
   id: string;
   ticketCode: string;
   eventId: number;

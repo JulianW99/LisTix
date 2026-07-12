@@ -8,6 +8,7 @@ const toNumber = (value) => (value === null || value === undefined ? null : Numb
 const ticketSelectSql = `
   SELECT
     t.id,
+    t.user_id,
     t.ticket_code,
     t.event_id,
     e.event_name,
@@ -47,6 +48,7 @@ const ticketSelectSql = `
 
 const mapTicketRow = (row) => ({
   databaseId: Number(row.id),
+  userId: row.user_id === null ? null : Number(row.user_id),
   id: row.ticket_code,
   ticketCode: row.ticket_code,
   eventId: Number(row.event_id),
@@ -154,40 +156,41 @@ export const mapSoldOrderRow = (row) => ({
   updatedAt: row.updated_at,
 });
 
-export const listTickets = async () => {
+export const listTickets = async (user) => {
   const result = await pool.query(`
     ${ticketSelectSql}
+    WHERE t.user_id = $1
     ORDER BY e.event_date ASC, t.ticket_code ASC
-  `);
+  `, [user.sub]);
 
   return result.rows.map(mapTicketRow);
 };
 
-export const getTicketByIdentifier = async (identifier) => {
+export const getTicketByIdentifier = async (identifier, user) => {
   const textIdentifier = String(identifier);
   const isNumericIdentifier = /^\d+$/.test(textIdentifier);
   const result = isNumericIdentifier
     ? await pool.query(
         `
           ${ticketSelectSql}
-          WHERE t.id = $1 OR t.ticket_code = $2
+          WHERE (t.id = $1 OR t.ticket_code = $2) AND t.user_id = $3
           LIMIT 1
         `,
-        [Number(textIdentifier), textIdentifier],
+        [Number(textIdentifier), textIdentifier, user.sub],
       )
     : await pool.query(
         `
           ${ticketSelectSql}
-          WHERE t.ticket_code = $1
+          WHERE t.ticket_code = $1 AND t.user_id = $2
           LIMIT 1
         `,
-        [textIdentifier],
+        [textIdentifier, user.sub],
       );
 
   return result.rows[0] ? mapTicketRow(result.rows[0]) : null;
 };
 
-const getTicketDatabaseRow = async (client, identifier) => {
+const getTicketDatabaseRow = async (client, identifier, user) => {
   const textIdentifier = String(identifier);
   const isNumericIdentifier = /^\d+$/.test(textIdentifier);
   const result = isNumericIdentifier
@@ -195,19 +198,19 @@ const getTicketDatabaseRow = async (client, identifier) => {
         `
           SELECT id, event_id, section_id, marketplace_status_id, restriction_id
           FROM tickets
-          WHERE id = $1 OR ticket_code = $2
+          WHERE (id = $1 OR ticket_code = $2) AND user_id = $3
           LIMIT 1
         `,
-        [Number(textIdentifier), textIdentifier],
+        [Number(textIdentifier), textIdentifier, user.sub],
       )
     : await client.query(
         `
           SELECT id, event_id, section_id, marketplace_status_id, restriction_id
           FROM tickets
-          WHERE ticket_code = $1
+          WHERE ticket_code = $1 AND user_id = $2
           LIMIT 1
         `,
-        [textIdentifier],
+        [textIdentifier, user.sub],
       );
 
   return result.rows[0] ?? null;
@@ -304,7 +307,7 @@ const assertTicketRefs = async (
   }
 };
 
-export const createTicket = async (payload) => {
+export const createTicket = async (payload, user) => {
   const validation = validateCreateTicketInput(payload);
 
   if (!validation.ok) {
@@ -345,8 +348,9 @@ export const createTicket = async (payload) => {
           purchase_price,
           asking_price,
           notes
+          , user_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         RETURNING id
       `,
       [
@@ -361,12 +365,13 @@ export const createTicket = async (payload) => {
         validation.value.purchasePrice,
         validation.value.askingPrice,
         validation.value.notes ?? null,
+        user.sub,
       ],
     );
 
     await client.query("COMMIT");
 
-    return getTicketByIdentifier(result.rows[0].id);
+    return getTicketByIdentifier(result.rows[0].id, user);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -375,7 +380,7 @@ export const createTicket = async (payload) => {
   }
 };
 
-export const updateTicket = async (identifier, payload) => {
+export const updateTicket = async (identifier, payload, user) => {
   const validation = validateCreateTicketInput(payload, { partial: true });
 
   if (!validation.ok) {
@@ -409,7 +414,7 @@ export const updateTicket = async (identifier, payload) => {
   try {
     await client.query("BEGIN");
 
-    const existingTicket = await getTicketDatabaseRow(client, identifier);
+    const existingTicket = await getTicketDatabaseRow(client, identifier, user);
 
     if (!existingTicket) {
       const error = new Error("Ticket not found.");
@@ -456,7 +461,7 @@ export const updateTicket = async (identifier, payload) => {
 
     await client.query("COMMIT");
 
-    return getTicketByIdentifier(result.rows[0].id);
+    return getTicketByIdentifier(result.rows[0].id, user);
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
@@ -465,11 +470,11 @@ export const updateTicket = async (identifier, payload) => {
   }
 };
 
-export const deleteTicket = async (identifier) => {
+export const deleteTicket = async (identifier, user) => {
   const client = await pool.connect();
 
   try {
-    const existingTicket = await getTicketDatabaseRow(client, identifier);
+    const existingTicket = await getTicketDatabaseRow(client, identifier, user);
 
     if (!existingTicket) {
       return false;
@@ -482,11 +487,12 @@ export const deleteTicket = async (identifier) => {
   }
 };
 
-export const listSoldOrders = async () => {
+export const listSoldOrders = async (user) => {
   const result = await pool.query(`
     ${soldOrderSelectSql}
+    WHERE t.user_id = $1
     ORDER BY so.sold_at DESC, so.order_code ASC
-  `);
+  `, [user.sub]);
 
   return result.rows.map(mapSoldOrderRow);
 };
@@ -590,7 +596,7 @@ export const getTicketInputOptions = async () => {
   };
 };
 
-export const getDashboardSnapshot = async () => {
+export const getDashboardSnapshot = async (user) => {
   const [summaryResult, trendResult, platformResult] = await Promise.all([
     pool.query(`
       WITH sold_ticket_costs AS (
@@ -602,16 +608,17 @@ export const getDashboardSnapshot = async () => {
         FROM sold_orders so
         INNER JOIN tickets t ON t.id = so.ticket_id
         INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
+        WHERE t.user_id = $1
       )
       SELECT
-        (SELECT COUNT(*)::int FROM tickets WHERE marketplace_status_id = (SELECT id FROM marketplace_statuses WHERE name = 'Listed')) AS listed_tickets,
-        (SELECT COUNT(*)::int FROM sold_orders) AS sold_tickets,
+        (SELECT COUNT(*)::int FROM tickets WHERE user_id = $1 AND marketplace_status_id = (SELECT id FROM marketplace_statuses WHERE name = 'Listed')) AS listed_tickets,
+        (SELECT COUNT(*)::int FROM sold_ticket_costs) AS sold_tickets,
         COALESCE(SUM(payout_amount), 0)::float AS total_payout,
         COALESCE(SUM(CASE WHEN is_terminal = TRUE THEN payout_amount ELSE 0 END), 0)::float AS payout_received,
         COALESCE(SUM(total_purchase_price), 0)::float AS cost_of_sold_tickets,
-        COALESCE((SELECT SUM(quantity) FROM tickets), 0)::int AS tickets_in_inventory
+        COALESCE((SELECT SUM(quantity) FROM tickets WHERE user_id = $1), 0)::int AS tickets_in_inventory
       FROM sold_ticket_costs
-    `),
+    `, [user.sub]),
     pool.query(`
       SELECT
           EXTRACT(MONTH FROM so.sold_at)::int AS sales_month,
@@ -621,18 +628,21 @@ export const getDashboardSnapshot = async () => {
       FROM sold_orders so
       INNER JOIN tickets t ON t.id = so.ticket_id
       WHERE EXTRACT(YEAR FROM so.sold_at)::int = EXTRACT(YEAR FROM NOW())::int
+        AND t.user_id = $1
       GROUP BY sales_month
       ORDER BY sales_month ASC
-    `),
+    `, [user.sub]),
     pool.query(`
       SELECT
         bc.name,
         COUNT(so.id)::int AS count
       FROM sold_orders so
       INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
+      INNER JOIN tickets t ON t.id = so.ticket_id
+      WHERE t.user_id = $1
       GROUP BY bc.name
       ORDER BY count DESC
-    `),
+    `, [user.sub]),
   ]);
 
   const summary = summaryResult.rows[0] || {};

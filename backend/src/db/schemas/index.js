@@ -7,6 +7,7 @@ import { createSeatSectionsTableSql } from "./seatSections.js";
 import { createSoldOrdersTableSql } from "./soldOrders.js";
 import { createTicketRestrictionsTableSql } from "./ticketRestrictions.js";
 import { createTicketsTableSql } from "./tickets.js";
+import { createSupportTablesSql } from "./support.js";
 import { createUsersTableSql } from "./users.js";
 import { createVenuesTableSql } from "./venues.js";
 
@@ -22,4 +23,5 @@ export const schemaStatements = [
   createTicketRestrictionsTableSql,
   createTicketsTableSql,
   createSoldOrdersTableSql,
+  createSupportTablesSql,
 ];

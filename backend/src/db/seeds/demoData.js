@@ -630,8 +630,14 @@ export const seedDemoData = async (client) => {
       return result;
     }, {});
 
+    const ownerRows = await client.query(`
+      SELECT id FROM users
+      WHERE email = ANY($1::text[])
+      ORDER BY array_position($1::text[], email)
+    `, [["admin@ticketadmin.local", "demo.alex@listix.local", "demo.jamie@listix.local", "demo.taylor@listix.local"]]);
+    const ownerIds = ownerRows.rows.map((row) => Number(row.id));
     const ticketRows = [];
-    for (const ticket of tickets) {
+    for (const [ticketIndex, ticket] of tickets.entries()) {
       const eventId = eventIds[ticket.eventName];
       const venueId = eventVenueIds[ticket.eventName];
       const result = await client.query(
@@ -647,9 +653,10 @@ export const seedDemoData = async (client) => {
             lowest_seat,
             purchase_price,
             asking_price,
-            notes
+            notes,
+            user_id
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
           ON CONFLICT (ticket_code) DO UPDATE SET
             event_id = EXCLUDED.event_id,
             section_id = EXCLUDED.section_id,
@@ -661,6 +668,7 @@ export const seedDemoData = async (client) => {
             purchase_price = EXCLUDED.purchase_price,
             asking_price = EXCLUDED.asking_price,
             notes = EXCLUDED.notes,
+            user_id = EXCLUDED.user_id,
             updated_at = NOW()
           RETURNING id, ticket_code
         `,
@@ -676,6 +684,7 @@ export const seedDemoData = async (client) => {
           ticket.purchasePrice,
           ticket.askingPrice,
           ticket.notes,
+          ownerIds[ticketIndex % ownerIds.length],
         ],
       );
       ticketRows.push(result.rows[0]);

@@ -1,0 +1,3 @@
+.form-field { display: grid; gap: 6px; }
+.form-field span { color: #aab3bc; font-size: .82rem; }
+.form-field input, .form-field select { width: 100%; min-width: 0; border: 1px solid #3b444e; border-radius: 6px; padding: 10px 11px; background: #15191e; color: #edf1f5; }

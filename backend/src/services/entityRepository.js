@@ -116,27 +116,27 @@ export const validateEntityPayload = (definition, payload, { partial = false } =
   };
 };
 
-export const listEntities = async (definition) => {
+export const listEntities = async (definition, context) => {
   if (definition.list) {
-    return definition.list();
+    return definition.list(context);
   }
 
   const result = await pool.query(definition.listSql);
   return result.rows.map(definition.mapRow);
 };
 
-export const getEntity = async (definition, id) => {
+export const getEntity = async (definition, id, context) => {
   if (definition.get) {
-    return definition.get(id);
+    return definition.get(id, context);
   }
 
   const result = await pool.query(definition.getSql, [id]);
   return result.rows[0] ? definition.mapRow(result.rows[0]) : null;
 };
 
-export const createEntity = async (definition, payload) => {
+export const createEntity = async (definition, payload, context) => {
   if (definition.create) {
-    return definition.create(payload);
+    return definition.create(payload, context);
   }
 
   const validation = validateEntityPayload(definition, payload);
@@ -162,12 +162,12 @@ export const createEntity = async (definition, payload) => {
     values,
   );
 
-  return getEntity(definition, result.rows[0].id);
+  return getEntity(definition, result.rows[0].id, context);
 };
 
-export const updateEntity = async (definition, id, payload) => {
+export const updateEntity = async (definition, id, payload, context) => {
   if (definition.update) {
-    return definition.update(id, payload);
+    return definition.update(id, payload, context);
   }
 
   const validation = validateEntityPayload(definition, payload, { partial: true });
@@ -204,12 +204,12 @@ export const updateEntity = async (definition, id, payload) => {
     return null;
   }
 
-  return getEntity(definition, result.rows[0].id);
+  return getEntity(definition, result.rows[0].id, context);
 };
 
-export const deleteEntity = async (definition, id) => {
+export const deleteEntity = async (definition, id, context) => {
   if (definition.delete) {
-    return definition.delete(id);
+    return definition.delete(id, context);
   }
 
   const result = await pool.query(

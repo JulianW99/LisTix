@@ -1,61 +1,69 @@
-# Ticket Admin MVP
+# LisTix
 
-Standalone MVP with:
+Ticket operations application with:
 
-- `backend/`: Node.js + Express + PostgreSQL + JWT cookie auth
-- `frontend/`: React + TypeScript + Vite admin interface
+- `backend/`: Node.js, Express, Neon PostgreSQL and JWT cookie authentication
+- `frontend/`: React, TypeScript, Vite and React Router
 
-## Prerequisites
+## Setup
 
-1. **Node.js**: We recommend using nvm to manage Node.js versions.
-2. **Docker**: Install Docker Desktop.
+Use Node.js 18 or newer. Install dependencies in both application folders:
 
-## Getting Started
+```bash
+cd backend
+npm install
 
-1.  **Clone the repository:**
-    ```bash
-    git clone <your-repo-url>
-    cd LisTix
-    ```
+cd ../frontend
+npm install
+```
 
-2.  **Set up environment variables:**
-    Copy the example files. You usually don't need to change them for local development.
-    ```bash
-    cp backend/.env.example backend/.env
-    cp frontend/.env.example frontend/.env
-    ```
+Create the local environment files:
 
-3.  **Start the database:**
-    This command starts a PostgreSQL database in a Docker container.
-    ```bash
-    docker-compose up -d
-    ```
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
 
-4.  **Start the backend:**
-    Open a new terminal.
-    ```bash
-    cd backend
-    nvm use       # Activates the correct Node.js version
-    npm install
-    npm run dev
-    ```
+Add the pooled Neon connection string to `backend/.env`:
 
-5.  **Start the frontend:**
-    Open a third terminal.
-    ```bash
-    cd frontend
-    nvm use       # Activates the correct Node.js version
-    npm install
-    npm run dev
-    ```
+```dotenv
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+DATABASE_SSL=true
+```
 
-On backend startup the app creates the `users` table if needed and seeds an admin user from the `.env` values.
+The backend creates the schema and seeds initial data when it starts. Authentication remains in the Express backend and uses a signed JWT stored in an HTTP-only cookie. Neon is used only as PostgreSQL.
 
-## Default Admin Credentials
+## Local Development
 
-The seeded admin account is controlled by these backend environment variables:
+Start the backend:
 
-- `ADMIN_EMAIL=admin@ticketadmin.local`
-- `ADMIN_PASSWORD=ChangeMe123!`
+```bash
+cd backend
+npm start
+```
 
-Change them before using this outside local development.
+Start the frontend in another terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open [http://localhost:4173](http://localhost:4173). The API health endpoint is available at [http://127.0.0.1:4010/api/health](http://127.0.0.1:4010/api/health).
+
+The seeded admin credentials are controlled by `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`.
+
+Additional demo accounts:
+
+- `demo.alex@listix.local` / `DemoUser123!`
+- `demo.jamie@listix.local` / `DemoUser123!`
+- `demo.taylor@listix.local` / `DemoUser123!`
+- `systemadmin@listix.local` / `SystemAdmin123!`
+
+## Frontend Structure
+
+- `src/Components/<Name>/`: each UI component and its same-named CSS file share one folder
+- `src/Functions/`: reusable functions, one concern per file
+- `src/Context/ApiContext.tsx`: route-driven API loading and normalized client-side entity caches
+- `DataTable`: generic table component used by listings, sales and payments
+- `BrowserRouter`: route-based navigation between application sections

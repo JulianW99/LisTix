@@ -22,9 +22,9 @@ const requireNumericId = (definition, id) => {
 export const createEntityCrudRoutes = (definition) => {
   const router = Router();
 
-  router.get("/", async (_req, res, next) => {
+  router.get("/", async (req, res, next) => {
     try {
-      const items = await listEntities(definition);
+      const items = await listEntities(definition, req.user);
       return res.json({ items });
     } catch (error) {
       return next(error);
@@ -34,7 +34,7 @@ export const createEntityCrudRoutes = (definition) => {
   router.get("/:id", async (req, res, next) => {
     try {
       requireNumericId(definition, req.params.id);
-      const item = await getEntity(definition, req.params.id);
+      const item = await getEntity(definition, req.params.id, req.user);
 
       if (!item) {
         return res.status(404).json({ message: `${definition.label} not found.` });
@@ -52,8 +52,8 @@ export const createEntityCrudRoutes = (definition) => {
         return res.status(405).json({ message: `${definition.label} is read-only.` });
       }
 
-      const item = await createEntity(definition, req.body);
-      return res.status(201).json({ item });
+      const item = await createEntity(definition, req.body, req.user);
+      return res.status(200).json({ item });
     } catch (error) {
       return next(error);
     }
@@ -66,7 +66,7 @@ export const createEntityCrudRoutes = (definition) => {
       }
 
       requireNumericId(definition, req.params.id);
-      const item = await updateEntity(definition, req.params.id, req.body);
+      const item = await updateEntity(definition, req.params.id, req.body, req.user);
 
       if (!item) {
         return res.status(404).json({ message: `${definition.label} not found.` });
@@ -85,7 +85,7 @@ export const createEntityCrudRoutes = (definition) => {
       }
 
       requireNumericId(definition, req.params.id);
-      const deleted = await deleteEntity(definition, req.params.id);
+      const deleted = await deleteEntity(definition, req.params.id, req.user);
 
       if (!deleted) {
         return res.status(404).json({ message: `${definition.label} not found.` });

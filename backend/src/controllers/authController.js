@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { env, isProduction } from "../config/env.js";
 import { pool } from "../db/pool.js";
 import { signSessionToken } from "../utils/jwt.js";
+import { buildProfileSettings } from "../functions/buildProfileSettings.js";
 
 const buildCookieOptions = () => ({
   httpOnly: true,
@@ -17,24 +18,6 @@ const mapUser = (row) => ({
   role: row.role,
   profileSettings: row.profile_settings ?? {},
   createdAt: row.created_at,
-});
-
-const buildProfileSettings = (input = {}) => ({
-  discordHandle: input.discordHandle ?? "",
-  discordUserId: input.discordUserId ?? "",
-  addressLine1: input.addressLine1 ?? "",
-  addressLine2: input.addressLine2 ?? "",
-  postalCode: input.postalCode ?? "",
-  city: input.city ?? "",
-  country: input.country ?? "",
-  payoutMethod: input.payoutMethod ?? "Bank transfer",
-  payoutAccountHolder: input.payoutAccountHolder ?? "",
-  payoutIban: input.payoutIban ?? "",
-  payoutBankName: input.payoutBankName ?? "",
-  paymentCardBrand: input.paymentCardBrand ?? "",
-  paymentCardLast4: input.paymentCardLast4 ?? "",
-  paymentCardExpiry: input.paymentCardExpiry ?? "",
-  pushoverUserKey: input.pushoverUserKey ?? "",
 });
 
 export const login = async (req, res, next) => {

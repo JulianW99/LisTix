@@ -1,0 +1,23 @@
+.system-layout { display: grid; grid-template-columns: 232px minmax(0, 1fr); height: 100dvh; overflow: hidden; background: #eef1f4; color: #17202a; color-scheme: light; }
+.system-sidebar { display: flex; flex-direction: column; height: 100dvh; padding: 18px 12px; background: #111820; color: #e9eef3; }
+.system-brand { display: flex; align-items: center; gap: 10px; padding: 4px 7px 24px; }
+.system-brand > span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 5px; background: #52c3a5; color: #10231f; font-weight: 900; }
+.system-brand strong, .system-brand small { display: block; }
+.system-brand small { color: #81909e; font-size: .68rem; }
+.system-sidebar nav { display: grid; gap: 4px; }
+.system-sidebar nav a { padding: 10px 11px; border-radius: 5px; color: #9fadb9; text-decoration: none; }
+.system-sidebar nav a.active { background: #1f2b35; color: #fff; box-shadow: inset 3px 0 #52c3a5; }
+.system-account { margin-top: auto; padding: 13px 7px 0; border-top: 1px solid #29343e; }
+.system-account strong, .system-account small { display: block; overflow: hidden; text-overflow: ellipsis; }
+.system-account small { color: #81909e; font-size: .7rem; }
+.system-account button { margin-top: 10px; border: 0; padding: 0; background: transparent; color: #52c3a5; }
+.system-workspace { display: grid; grid-template-rows: 72px minmax(0, 1fr); min-width: 0; min-height: 0; }
+.system-topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 24px; border-bottom: 1px solid #d6dce1; background: #fff; }
+.system-topbar small { color: #71808e; }
+.system-topbar h1 { margin: 1px 0 0; font-size: 1.28rem; }
+.system-live-indicator { color: #26745e; font-size: .76rem; font-weight: 800; }
+.system-content { min-width: 0; min-height: 0; padding: 22px; overflow-y: auto; }
+.system-panel { border: 1px solid #d5dce2; border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgb(27 39 51 / 6%); }
+.system-button { min-height: 38px; border: 1px solid #cad2d9; border-radius: 5px; padding: 8px 12px; background: #fff; color: #26333e; font-weight: 700; }
+.system-button.primary { border-color: #23866b; background: #23866b; color: #fff; }
+@media (max-width: 760px) { .system-layout { display: block; height: auto; } .system-sidebar { height: auto; } .system-sidebar nav { display: flex; } .system-account { display: none; } .system-workspace { display: block; } }

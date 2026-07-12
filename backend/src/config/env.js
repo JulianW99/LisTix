@@ -31,6 +31,11 @@ export const env = {
     password: process.env.ADMIN_PASSWORD || "ChangeMe123!",
     displayName: process.env.ADMIN_DISPLAY_NAME || "Platform Admin",
   },
+  systemAdminUser: {
+    email: process.env.SYSTEM_ADMIN_EMAIL || "systemadmin@listix.local",
+    password: process.env.SYSTEM_ADMIN_PASSWORD || "SystemAdmin123!",
+    displayName: process.env.SYSTEM_ADMIN_DISPLAY_NAME || "LisTix System Admin",
+  },
 };
 
 export const isProduction = env.nodeEnv === "production";

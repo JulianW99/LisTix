@@ -1,0 +1,10 @@
+.user-management { padding: 20px; }
+.user-management > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
+.user-management h2 { margin-bottom: 4px; font-size: 1.1rem; }
+.user-management p, .user-management > header > span { margin: 0; color: #71808e; font-size: .82rem; }
+.user-management .data-table th { color: #687785; }
+.user-management .data-table td { color: #26333e; border-color: #e0e5e9; }
+.user-management .data-table tbody tr:hover { background: #f5f7f8; }
+.system-status { display: inline-flex; border-radius: 999px; padding: 4px 8px; font-size: .72rem; font-weight: 800; }
+.system-status.ok { background: #daf3ea; color: #176c55; }
+.system-status.action { background: #ffe6df; color: #a43e2b; }

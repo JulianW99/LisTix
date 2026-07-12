@@ -1,0 +1,9 @@
+.data-table-shell { width: 100%; overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+.data-table th, .data-table td { padding: 11px 10px; border-bottom: 1px solid #2c333b; vertical-align: top; text-align: left; white-space: nowrap; }
+.data-table th { color: #89949f; font-size: .7rem; letter-spacing: .06em; text-transform: uppercase; }
+.data-table td strong, .data-table td small { display: block; }
+.data-table td small { margin-top: 2px; color: #8f9aa5; }
+.data-table tbody tr:hover { background: #20262c; }
+.data-table-empty { padding: 30px !important; color: #8f9aa5; text-align: center !important; }
+.numeric-column { text-align: right !important; }
