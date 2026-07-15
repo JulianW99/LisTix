@@ -8,7 +8,10 @@ export const createSoldOrdersTableSql = `
     sold_at TIMESTAMPTZ NOT NULL,
     payout_amount NUMERIC(10, 2) NOT NULL CHECK (payout_amount >= 0),
     customer_name VARCHAR(255) NOT NULL,
+    buyer_email VARCHAR(255),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
+
+  ALTER TABLE sold_orders ADD COLUMN IF NOT EXISTS buyer_email VARCHAR(255);
 `;

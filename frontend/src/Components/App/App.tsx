@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { AppLayout } from "../AppLayout/AppLayout";
+import { CreateListingPage } from "../CreateListingPage/CreateListingPage";
 import { DashboardPage } from "../DashboardPage/DashboardPage";
 import { IntegrationsPage } from "../IntegrationsPage/IntegrationsPage";
 import { ListingsPage } from "../ListingsPage/ListingsPage";
@@ -8,6 +9,7 @@ import { LoadingScreen } from "../LoadingScreen/LoadingScreen";
 import { LoginPage } from "../LoginPage/LoginPage";
 import { PaymentsPage } from "../PaymentsPage/PaymentsPage";
 import { SalesPage } from "../SalesPage/SalesPage";
+import { SaleDetailsPage } from "../SaleDetailsPage/SaleDetailsPage";
 import { SettingsPage } from "../SettingsPage/SettingsPage";
 import { SystemAdminLayout } from "../SystemAdminLayout/SystemAdminLayout";
 import { SystemSupportPage } from "../SystemSupportPage/SystemSupportPage";
@@ -38,7 +40,7 @@ function App() {
     return <Routes><Route element={<SystemAdminLayout user={user} onLogout={logout} />}><Route path="/system/users" element={<UserManagementPage />} /><Route path="/system/support" element={<SystemSupportPage />} /><Route path="*" element={<Navigate to="/system/users" replace />} /></Route></Routes>;
   }
 
-  return <Routes><Route element={<AppLayout user={user} onLogout={logout} />}><Route path="/dashboard" element={<DashboardPage />} /><Route path="/listings" element={<ListingsPage />} /><Route path="/sales" element={<SalesPage />} /><Route path="/payments" element={<PaymentsPage />} /><Route path="/integrations" element={<IntegrationsPage />} /><Route path="/settings" element={<SettingsPage />} /><Route path="*" element={<Navigate to="/dashboard" replace />} /></Route></Routes>;
+  return <Routes><Route element={<AppLayout user={user} onLogout={logout} />}><Route path="/dashboard" element={<DashboardPage />} /><Route path="/listings" element={<ListingsPage />} /><Route path="/listings/new" element={<CreateListingPage />} /><Route path="/listings/new/:eventId" element={<CreateListingPage />} /><Route path="/listings/:listingId/edit" element={<CreateListingPage />} /><Route path="/sales" element={<SalesPage />} /><Route path="/sales/:orderId" element={<SaleDetailsPage />} /><Route path="/payments" element={<PaymentsPage />} /><Route path="/integrations" element={<IntegrationsPage />} /><Route path="/settings" element={<SettingsPage />} /><Route path="*" element={<Navigate to="/dashboard" replace />} /></Route></Routes>;
 }
 
 export default App;

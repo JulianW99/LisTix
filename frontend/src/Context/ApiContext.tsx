@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "../api";
 import { upsertEntity } from "../Functions/upsertEntity";
-import type { CreateTicketInput, DashboardData, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemUser, TicketInputOptions, TicketItem, UpdateMeInput, User } from "../types";
+import type { CreateTicketInput, DashboardData, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemUser, TicketInputOptions, TicketItem, UpdateMeInput, UpdateTicketInput, User } from "../types";
 
 type ApiContextValue = {
   user: User | null; initializing: boolean;
@@ -10,7 +10,8 @@ type ApiContextValue = {
   systemUsers: SystemUser[] | null; systemTickets: SupportTicket[] | null; systemTopics: SupportTopic[] | null; supportDashboard: SupportDashboard | null;
   login: (email: string, password: string) => Promise<User>; logout: () => Promise<void>; updateMe: (payload: UpdateMeInput) => Promise<User>;
   loadDashboard: (force?: boolean) => Promise<void>; loadTickets: (force?: boolean) => Promise<void>; loadSoldOrders: (force?: boolean) => Promise<void>; loadTicketOptions: (force?: boolean) => Promise<void>;
-  createTicket: (payload: CreateTicketInput) => Promise<TicketItem>;
+  createTicket: (payload: CreateTicketInput) => Promise<TicketItem>; updateTicket: (id: string | number, payload: UpdateTicketInput) => Promise<TicketItem>; deleteTicket: (id: string | number) => Promise<void>;
+  completeSale: (id: number, dispatchStatusId: number) => Promise<void>;
   loadSupport: (force?: boolean) => Promise<void>; loadSupportTicket: (id: string | number, admin?: boolean) => Promise<SupportTicket>; createSupportTicket: (topicId: number, text: string) => Promise<SupportTicket>; replyToTicket: (id: string | number, text: string) => Promise<SupportTicket>;
   loadSystemUsers: (force?: boolean) => Promise<void>; loadSystemTickets: (filters: SupportFilters) => Promise<void>; loadSystemTopics: (force?: boolean) => Promise<void>; loadSupportDashboard: (filters: SupportFilters) => Promise<void>;
   replyAsSystemAdmin: (id: string | number, text: string) => Promise<SupportTicket>; updateSupportStatus: (id: string | number, status: SupportTicket["status"]) => Promise<SupportTicket>;
@@ -35,6 +36,9 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const loadSoldOrders = useCallback(async (force = false) => { if (soldOrders && !force) return; setSoldOrders((await api.soldOrders()).items); }, [soldOrders]);
   const loadTicketOptions = useCallback(async (force = false) => { if (ticketOptions && !force) return; setTicketOptions(await api.ticketInputOptions()); }, [ticketOptions]);
   const createTicket = async (payload: CreateTicketInput) => { const result = await api.createTicket(payload); setTickets((items) => upsertEntity(items ?? [], result.item)); return result.item; };
+  const updateTicket = async (id: string | number, payload: UpdateTicketInput) => { const result = await api.updateTicket(id, payload); setTickets((items) => upsertEntity(items ?? [], result.item)); return result.item; };
+  const deleteTicket = async (id: string | number) => { await api.deleteTicket(id); setTickets((items) => items?.filter((item) => item.databaseId !== Number(id)) ?? null); };
+  const completeSale = async (id: number, dispatchStatusId: number) => { await api.updateSoldOrder(id, { dispatchStatusId }); setSoldOrders((items) => items?.map((item) => item.databaseId === id ? { ...item, dispatchStatusId, dispatchStatus: "Completed", dispatchComplete: true } : item) ?? null); };
   const loadSupport = useCallback(async (force = false) => { if (supportTopics && supportTickets && !force) return; const [topics, items] = await Promise.all([api.supportTopics(), api.mySupportTickets()]); setSupportTopics(topics.items); setSupportTickets(items.items); }, [supportTickets, supportTopics]);
   const loadSupportTicket = async (id: string | number, admin = false) => { const result = admin ? await api.systemSupportTicket(id) : await api.supportTicket(id); (admin ? setSystemTickets : setSupportTickets)((items) => upsertEntity(items ?? [], result.item)); return result.item; };
   const createSupportTicket = async (topicId: number, text: string) => { const result = await api.createSupportTicket(topicId, text); setSupportTickets((items) => upsertEntity(items ?? [], result.item)); return result.item; };
@@ -48,7 +52,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const createSupportTopic = async (name: string) => { const result = await api.createSupportTopic(name); setSystemTopics((items) => upsertEntity(items ?? [], result.item)); return result.item; };
   const deleteSupportTopic = async (id: number) => { const result = await api.deleteSupportTopic(id); setSystemTopics((items) => upsertEntity(items ?? [], result.item)); return result.item; };
 
-  const value = useMemo<ApiContextValue>(() => ({ user, initializing, dashboard, tickets, soldOrders, ticketOptions, supportTopics, supportTickets, systemUsers, systemTickets, systemTopics, supportDashboard, login, logout, updateMe, loadDashboard, loadTickets, loadSoldOrders, loadTicketOptions, createTicket, loadSupport, loadSupportTicket, createSupportTicket, replyToTicket, loadSystemUsers, loadSystemTickets, loadSystemTopics, loadSupportDashboard, replyAsSystemAdmin, updateSupportStatus, createSupportTopic, deleteSupportTopic }), [user, initializing, dashboard, tickets, soldOrders, ticketOptions, supportTopics, supportTickets, systemUsers, systemTickets, systemTopics, supportDashboard, loadDashboard, loadTickets, loadSoldOrders, loadTicketOptions, loadSupport, loadSystemUsers, loadSystemTopics]);
+  const value = useMemo<ApiContextValue>(() => ({ user, initializing, dashboard, tickets, soldOrders, ticketOptions, supportTopics, supportTickets, systemUsers, systemTickets, systemTopics, supportDashboard, login, logout, updateMe, loadDashboard, loadTickets, loadSoldOrders, loadTicketOptions, createTicket, updateTicket, deleteTicket, completeSale, loadSupport, loadSupportTicket, createSupportTicket, replyToTicket, loadSystemUsers, loadSystemTickets, loadSystemTopics, loadSupportDashboard, replyAsSystemAdmin, updateSupportStatus, createSupportTopic, deleteSupportTopic }), [user, initializing, dashboard, tickets, soldOrders, ticketOptions, supportTopics, supportTickets, systemUsers, systemTickets, systemTopics, supportDashboard, loadDashboard, loadTickets, loadSoldOrders, loadTicketOptions, loadSupport, loadSystemUsers, loadSystemTopics]);
   return <ApiContext.Provider value={value}>{children}</ApiContext.Provider>;
 }
 

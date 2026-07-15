@@ -134,6 +134,10 @@ export type TicketItem = {
   lowestSeat: number | null;
   restrictionId: number | null;
   restriction: string | null;
+  restrictionIds: number[];
+  restrictions: string[];
+  ticketType: "Mobile ticket transfer" | "PDF-Ticket";
+  marketplacePrices: MarketplacePrice[];
   marketplaceStatusId: number;
   marketplaceStatus: string;
   section: string;
@@ -175,6 +179,8 @@ export type SoldOrder = {
   roi: number;
   customerName: string;
   buyerEmail?: string | null;
+  ticketType?: "Mobile ticket transfer" | "PDF-Ticket";
+  restrictions?: string[];
   createdAt: string;
   updatedAt: string;
 };
@@ -193,6 +199,7 @@ export type TicketSectionOption = {
   venueId: number;
   venueName: string;
   name: string;
+  rowLabels: string[];
 };
 
 export type MarketplaceStatusOption = {
@@ -216,7 +223,10 @@ export type TicketInputOptions = {
 export type CreateTicketInput = {
   eventId: number;
   sectionId: number;
-  restrictionId: number;
+  restrictionId?: number;
+  restrictionIds: number[];
+  ticketType: "Mobile ticket transfer" | "PDF-Ticket";
+  marketplaceStatusId?: number;
   quantity: number;
   rowLabel: string;
   lowestSeat: number;
@@ -224,6 +234,10 @@ export type CreateTicketInput = {
   askingPrice: number;
   notes?: string | null;
 };
+
+export type MarketplacePrice = { marketplace: string; lowestPrice: number | null };
+
+export type UpdateTicketInput = Partial<CreateTicketInput>;
 
 export type UpdateMeInput = {
   displayName: string;

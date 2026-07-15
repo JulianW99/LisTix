@@ -339,6 +339,7 @@ export const entityDefinitions = [
       { name: "soldAt", column: "sold_at", type: "datetime", required: true },
       { name: "payoutAmount", column: "payout_amount", type: "number", required: true, min: 0 },
       { name: "customerName", column: "customer_name", type: "string", required: true },
+      { name: "buyerEmail", column: "buyer_email", type: "string" },
     ],
     listSql: `
       SELECT

@@ -1,4 +1,4 @@
-import type { CreateTicketInput, DashboardData, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemUser, TicketInputOptions, TicketItem, UpdateMeInput, User } from "./types";
+import type { CreateTicketInput, DashboardData, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemUser, TicketInputOptions, TicketItem, UpdateMeInput, UpdateTicketInput, User } from "./types";
 
 const API_BASE_URL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL?.trim() || "/api";
 type ApiRequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
@@ -33,8 +33,11 @@ export const api = {
   dashboard: () => request<DashboardData>("/admin/dashboard"),
   tickets: () => request<{ items: TicketItem[] }>("/admin/tickets"),
   soldOrders: () => request<{ items: SoldOrder[] }>("/admin/orders/sold"),
+  updateSoldOrder: (id: string | number, payload: { dispatchStatusId: number }) => request<{ item: SoldOrder }>(`/admin/sold-orders/${id}`, { method: "PUT", body: payload }),
   ticketInputOptions: () => request<TicketInputOptions>("/admin/tickets/input-options"),
   createTicket: (payload: CreateTicketInput) => request<{ item: TicketItem }>("/admin/tickets", { body: payload }),
+  updateTicket: (id: string | number, payload: UpdateTicketInput) => request<{ item: TicketItem }>(`/admin/tickets/${id}`, { method: "PUT", body: payload }),
+  deleteTicket: (id: string | number) => request<void>(`/admin/tickets/${id}`, { method: "DELETE" }),
   supportTopics: () => request<{ items: SupportTopic[] }>("/support/topics"),
   mySupportTickets: () => request<{ items: SupportTicket[] }>("/support/tickets"),
   supportTicket: (id: string | number) => request<{ item: SupportTicket }>(`/support/tickets/${id}`),

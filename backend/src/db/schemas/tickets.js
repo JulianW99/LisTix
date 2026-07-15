@@ -6,6 +6,8 @@ export const createTicketsTableSql = `
     section_id INTEGER NOT NULL REFERENCES seat_sections(id) ON DELETE RESTRICT,
     marketplace_status_id INTEGER NOT NULL REFERENCES marketplace_statuses(id) ON DELETE RESTRICT,
     restriction_id INTEGER REFERENCES ticket_restrictions(id) ON DELETE RESTRICT,
+    restriction_ids INTEGER[] NOT NULL DEFAULT '{}',
+    ticket_type VARCHAR(80) NOT NULL DEFAULT 'Mobile ticket transfer',
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     row_label VARCHAR(80) NOT NULL DEFAULT '',
     lowest_seat INTEGER CHECK (lowest_seat IS NULL OR lowest_seat > 0),
@@ -27,6 +29,16 @@ export const createTicketsTableSql = `
 
   ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS restriction_ids INTEGER[] NOT NULL DEFAULT '{}';
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS ticket_type VARCHAR(80) NOT NULL DEFAULT 'Mobile ticket transfer';
+
+  UPDATE tickets
+  SET restriction_ids = ARRAY[restriction_id]
+  WHERE restriction_id IS NOT NULL AND cardinality(restriction_ids) = 0;
 
   CREATE INDEX IF NOT EXISTS tickets_user_id_idx ON tickets(user_id);
 `;

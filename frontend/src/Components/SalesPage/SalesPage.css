@@ -1,3 +1,33 @@
 .sales-page { min-height: 100%; }
-.profit-positive { color: #82d7a0; }
-.profit-negative { color: #ff9f9f; }
+.sales-feedback { margin-bottom: 14px; }
+.sale-actions-column { text-align: right !important; }
+.sale-row-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.sale-row-actions button { min-height: 32px; padding: 5px 9px; font-size: .76rem; white-space: nowrap; }
+.sale-details-content { display: grid; gap: 20px; }
+.sale-details-content section + section { border-top: 1px solid #343c45; padding-top: 18px; }
+.sale-details-content h3 { margin: 0 0 8px; color: #f3ab3c; font-size: .77rem; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; }
+.sale-details-content dl { display: grid; margin: 0; }
+.sale-details-content dl > div { display: grid; grid-template-columns: minmax(120px, .45fr) minmax(0, 1fr); gap: 20px; border-bottom: 1px solid rgb(52 60 69 / 65%); padding: 9px 0; }
+.sale-details-content dl > div:last-child { border-bottom: 0; }
+.sale-details-content dt { color: #89949f; font-size: .78rem; }
+.sale-details-content dd { min-width: 0; margin: 0; color: #edf1f5; font-size: .84rem; font-weight: 700; overflow-wrap: anywhere; }
+.copy-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 18px; }
+.copy-details > span { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; border: 1px solid #323a43; border-radius: 6px; padding: 9px 10px; background: #20262d; }
+.copy-details small { grid-column: 1; color: #89949f; font-size: .7rem; }
+.copy-details strong { grid-column: 1; min-width: 0; overflow-wrap: anywhere; }
+.copy-details button { grid-column: 2; grid-row: 1 / 3; align-self: center; border: 0; background: transparent; color: #f3ab3c; }
+.copy-details button:disabled { color: #59636e; }
+.transfer-methods { display: flex; flex-wrap: wrap; gap: 7px; margin: 18px 0 12px; }
+.transfer-methods button { border: 1px solid #3b444e; border-radius: 6px; padding: 8px 10px; background: #252b32; color: #c9d0d7; }
+.transfer-methods button.active { border-color: #f3ab3c; background: #3a3020; color: #ffd995; }
+.upload-zone { display: grid; place-items: center; gap: 7px; border: 1px dashed #59636e; border-radius: 7px; padding: 24px; background: #15191e; text-align: center; }
+.upload-zone:focus { border-color: #f3ab3c; outline: 0; }
+.upload-zone span, .upload-zone small { color: #98a3ae; }
+.ticket-links { display: grid; gap: 8px; }
+.ticket-links > span { color: #aab3bc; font-size: .82rem; }
+.ticket-links > div { display: flex; gap: 7px; }
+.ticket-links input { flex: 1; border: 1px solid #3b444e; border-radius: 6px; padding: 10px 11px; background: #15191e; color: #edf1f5; }
+.ticket-links > div button { width: 40px; border: 1px solid #63363b; border-radius: 6px; background: #422327; color: #ff9da5; }
+.add-link-button { justify-self: start; }
+.transfer-error { margin-top: 12px; }
+@media (max-width: 720px) { .sale-row-actions { align-items: flex-end; flex-direction: column; } .copy-details { grid-template-columns: 1fr; } .sale-details-content dl > div { grid-template-columns: 1fr; gap: 3px; } }

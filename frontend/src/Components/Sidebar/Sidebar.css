@@ -7,6 +7,7 @@
 .sidebar-link { border-radius: 6px; padding: 10px 12px; color: #aeb7c0; text-decoration: none; }
 .sidebar-link:hover { background: #22282f; color: #fff; }
 .sidebar-link.active { background: #332b1f; color: #ffd58e; box-shadow: inset 3px 0 #f3ab3c; }
+.settings-back-link { margin-top: 28px; border: 1px solid #3b444e; color: #d5dce3; }
 .sidebar-user { margin-top: auto; padding: 14px 8px 2px; min-width: 0; border-top: 1px solid #2c333b; }
 .sidebar-user span, .sidebar-user strong { display: block; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-user span { color: #7f8a95; font-size: .72rem; }

@@ -156,6 +156,10 @@ const marketplaceStatuses = [
     description: "Inventory is captured but not listed yet.",
   },
   {
+    name: "Active",
+    description: "Ticket is live across connected marketplaces.",
+  },
+  {
     name: "Needs pricing",
     description: "Ticket exists but requires a resale price.",
   },
@@ -224,8 +228,12 @@ const ticketRestrictions = [
     description: "Ticket must be delivered through mobile transfer.",
   },
   {
-    name: "Under 18 accompanied",
-    description: "Underage buyers must be accompanied by an adult.",
+    name: "Under 16s accompanied by an adult",
+    description: "Guests under 16 must be accompanied by an adult.",
+  },
+  {
+    name: "Only over 18s",
+    description: "Entry is restricted to guests over 18.",
   },
 ];
 
@@ -648,6 +656,8 @@ export const seedDemoData = async (client) => {
             section_id,
             marketplace_status_id,
             restriction_id,
+            restriction_ids,
+            ticket_type,
             quantity,
             row_label,
             lowest_seat,
@@ -656,12 +666,14 @@ export const seedDemoData = async (client) => {
             notes,
             user_id
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
           ON CONFLICT (ticket_code) DO UPDATE SET
             event_id = EXCLUDED.event_id,
             section_id = EXCLUDED.section_id,
             marketplace_status_id = EXCLUDED.marketplace_status_id,
             restriction_id = EXCLUDED.restriction_id,
+            restriction_ids = EXCLUDED.restriction_ids,
+            ticket_type = EXCLUDED.ticket_type,
             quantity = EXCLUDED.quantity,
             row_label = EXCLUDED.row_label,
             lowest_seat = EXCLUDED.lowest_seat,
@@ -678,6 +690,8 @@ export const seedDemoData = async (client) => {
           sectionIds[`${venueId}:${ticket.sectionName}`],
           statusIds[ticket.marketplaceStatusName],
           restrictionIds[ticket.restrictionName],
+          [restrictionIds[ticket.restrictionName]],
+          ticket.restrictionName === "Mobile transfer only" ? "Mobile ticket transfer" : "PDF-Ticket",
           ticket.quantity,
           ticket.rowLabel,
           ticket.lowestSeat,
@@ -703,9 +717,10 @@ export const seedDemoData = async (client) => {
             dispatch_status_id,
             sold_at,
             payout_amount,
-            customer_name
+            customer_name,
+            buyer_email
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
           ON CONFLICT (order_code) DO UPDATE SET
             ticket_id = EXCLUDED.ticket_id,
             buyer_channel_id = EXCLUDED.buyer_channel_id,
@@ -713,6 +728,7 @@ export const seedDemoData = async (client) => {
             sold_at = EXCLUDED.sold_at,
             payout_amount = EXCLUDED.payout_amount,
             customer_name = EXCLUDED.customer_name,
+            buyer_email = EXCLUDED.buyer_email,
             updated_at = NOW()
         `,
         [
@@ -723,6 +739,7 @@ export const seedDemoData = async (client) => {
           order.soldAt,
           order.payoutAmount,
           order.customerName,
+          `${order.customerName.toLowerCase().replace(/\s+/g, ".")}@buyer.example`,
         ],
       );
     }

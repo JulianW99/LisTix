@@ -1,7 +1,9 @@
 export const createTicketInputSchema = {
   eventId: { type: "integer", required: true },
   sectionId: { type: "integer", required: true },
-  restrictionId: { type: "integer", required: true },
+  restrictionId: { type: "integer", required: false },
+  restrictionIds: { type: "integerArray", required: true },
+  ticketType: { type: "string", required: true },
   marketplaceStatusId: { type: "integer", required: false },
   quantity: { type: "integer", required: true, min: 1 },
   rowLabel: { type: "string", required: true },
@@ -77,6 +79,19 @@ const parseString = (fieldName, value, fieldSchema, errors) => {
   return text || null;
 };
 
+const parseIntegerArray = (fieldName, value, fieldSchema, errors) => {
+  if (!Array.isArray(value)) {
+    if (fieldSchema.required) errors[fieldName] = "Must be an array.";
+    return undefined;
+  }
+  const parsed = [...new Set(value.map(Number))];
+  if (parsed.some((item) => !Number.isInteger(item) || item < 1)) {
+    errors[fieldName] = "Must contain valid IDs.";
+    return undefined;
+  }
+  return parsed;
+};
+
 export const validateCreateTicketInput = (payload, { partial = false } = {}) => {
   const errors = {};
   const value = {};
@@ -115,6 +130,12 @@ export const validateCreateTicketInput = (payload, { partial = false } = {}) => 
       if (parsedValue !== undefined) {
         value[fieldName] = parsedValue;
       }
+      continue;
+    }
+
+    if (effectiveSchema.type === "integerArray") {
+      const parsedValue = parseIntegerArray(fieldName, rawValue, effectiveSchema, errors);
+      if (parsedValue !== undefined) value[fieldName] = parsedValue;
     }
   }
 

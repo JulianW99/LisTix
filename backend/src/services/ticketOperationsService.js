@@ -29,6 +29,32 @@ const ticketSelectSql = `
     END AS seat_label,
     t.restriction_id,
     tr.name AS restriction_name,
+    t.restriction_ids,
+    ARRAY(
+      SELECT restriction.name
+      FROM ticket_restrictions restriction
+      WHERE restriction.id = ANY(t.restriction_ids)
+      ORDER BY restriction.name
+    ) AS restriction_names,
+    t.ticket_type,
+    COALESCE((
+      SELECT jsonb_agg(
+        jsonb_build_object(
+          'marketplace', bc.name,
+          'lowestPrice', (
+            SELECT MIN(other.asking_price)::float
+            FROM tickets other
+            INNER JOIN marketplace_statuses other_status ON other_status.id = other.marketplace_status_id
+            WHERE other.event_id = t.event_id
+              AND other.section_id = t.section_id
+              AND other.id <> t.id
+              AND other_status.name IN ('Active', 'Listed')
+          )
+        ) ORDER BY bc.name
+      )
+      FROM buyer_channels bc
+      WHERE bc.name <> 'Manual Buyer'
+    ), '[]'::jsonb) AS marketplace_prices,
     t.marketplace_status_id,
     ms.name AS marketplace_status_name,
     t.quantity,
@@ -66,6 +92,10 @@ const mapTicketRow = (row) => ({
   seatLabel: row.seat_label,
   restrictionId: row.restriction_id === null ? null : Number(row.restriction_id),
   restriction: row.restriction_name,
+  restrictionIds: (row.restriction_ids ?? []).map(Number),
+  restrictions: row.restriction_names ?? [],
+  ticketType: row.ticket_type,
+  marketplacePrices: row.marketplace_prices ?? [],
   marketplaceStatusId: Number(row.marketplace_status_id),
   marketplaceStatus: row.marketplace_status_name,
   quantity: Number(row.quantity),
@@ -88,6 +118,13 @@ const soldOrderSelectSql = `
     t.row_label,
     t.lowest_seat,
     t.section_id,
+    t.ticket_type,
+    ARRAY(
+      SELECT restriction.name
+      FROM ticket_restrictions restriction
+      WHERE restriction.id = ANY(t.restriction_ids)
+      ORDER BY restriction.name
+    ) AS restriction_names,
     ss.name AS section_name,
     CASE
       WHEN t.lowest_seat IS NULL THEN ss.seat_label
@@ -106,6 +143,7 @@ const soldOrderSelectSql = `
     so.sold_at,
     so.payout_amount,
     so.customer_name,
+    so.buyer_email,
     so.created_at,
     so.updated_at
   FROM sold_orders so
@@ -152,6 +190,9 @@ export const mapSoldOrderRow = (row) => ({
         100
       : 0,
   customerName: row.customer_name,
+  buyerEmail: row.buyer_email,
+  ticketType: row.ticket_type,
+  restrictions: row.restriction_names ?? [],
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -196,7 +237,7 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
   const result = isNumericIdentifier
     ? await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id
+          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
           FROM tickets
           WHERE (id = $1 OR ticket_code = $2) AND user_id = $3
           LIMIT 1
@@ -205,7 +246,7 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
       )
     : await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id
+          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
           FROM tickets
           WHERE ticket_code = $1 AND user_id = $2
           LIMIT 1
@@ -234,18 +275,32 @@ const generateTicketCode = async (client) => {
   return `TCK-${result.rows[0].next_number}`;
 };
 
-const getDraftMarketplaceStatusId = async (client) => {
+const getMarketplaceStatusId = async (client, name) => {
   const result = await client.query(
-    "SELECT id FROM marketplace_statuses WHERE name = 'Draft' LIMIT 1",
+    "SELECT id FROM marketplace_statuses WHERE name = $1 LIMIT 1",
+    [name],
   );
 
   if (!result.rows[0]) {
-    const error = new Error("Draft marketplace status is missing.");
+    const error = new Error(`${name} marketplace status is missing.`);
     error.statusCode = 500;
     throw error;
   }
 
   return Number(result.rows[0].id);
+};
+
+const assertRestrictionIds = async (client, restrictionIds = []) => {
+  if (!restrictionIds.length) return;
+  const result = await client.query(
+    "SELECT COUNT(*)::int AS count FROM ticket_restrictions WHERE id = ANY($1::int[])",
+    [restrictionIds],
+  );
+  if (Number(result.rows[0].count) !== restrictionIds.length) {
+    const error = new Error("One or more selected restrictions do not exist.");
+    error.statusCode = 400;
+    throw error;
+  }
 };
 
 const assertTicketRefs = async (
@@ -323,15 +378,23 @@ export const createTicket = async (payload, user) => {
     await client.query("BEGIN");
 
     const marketplaceStatusId =
-      validation.value.marketplaceStatusId ?? await getDraftMarketplaceStatusId(client);
+      validation.value.marketplaceStatusId ?? await getMarketplaceStatusId(client, "Active");
+    const restrictionIds = validation.value.restrictionIds ?? [];
+    const restrictionId = validation.value.restrictionId ?? restrictionIds[0] ?? null;
+
+    if (!restrictionId) {
+      const noRestriction = await client.query("SELECT id FROM ticket_restrictions WHERE name = 'No restrictions' LIMIT 1");
+      validation.value.restrictionId = Number(noRestriction.rows[0]?.id);
+    }
 
     await assertTicketRefs(
       client,
       validation.value.eventId,
       validation.value.sectionId,
       marketplaceStatusId,
-      validation.value.restrictionId,
+      validation.value.restrictionId ?? restrictionId,
     );
+    await assertRestrictionIds(client, restrictionIds);
 
     const ticketCode = await generateTicketCode(client);
     const result = await client.query(
@@ -342,6 +405,8 @@ export const createTicket = async (payload, user) => {
           section_id,
           marketplace_status_id,
           restriction_id,
+          restriction_ids,
+          ticket_type,
           quantity,
           row_label,
           lowest_seat,
@@ -350,7 +415,7 @@ export const createTicket = async (payload, user) => {
           notes
           , user_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING id
       `,
       [
@@ -358,7 +423,9 @@ export const createTicket = async (payload, user) => {
         validation.value.eventId,
         validation.value.sectionId,
         marketplaceStatusId,
-        validation.value.restrictionId,
+        validation.value.restrictionId ?? restrictionId,
+        restrictionIds,
+        validation.value.ticketType,
         validation.value.quantity,
         validation.value.rowLabel,
         validation.value.lowestSeat,
@@ -394,6 +461,8 @@ export const updateTicket = async (identifier, payload, user) => {
     ["eventId", "event_id"],
     ["sectionId", "section_id"],
     ["restrictionId", "restriction_id"],
+    ["restrictionIds", "restriction_ids"],
+    ["ticketType", "ticket_type"],
     ["marketplaceStatusId", "marketplace_status_id"],
     ["quantity", "quantity"],
     ["rowLabel", "row_label"],
@@ -428,6 +497,10 @@ export const updateTicket = async (identifier, payload, user) => {
       validation.value.marketplaceStatusId ?? Number(existingTicket.marketplace_status_id);
     const nextRestrictionId =
       validation.value.restrictionId ?? Number(existingTicket.restriction_id);
+
+    if (validation.value.restrictionIds !== undefined) {
+      await assertRestrictionIds(client, validation.value.restrictionIds);
+    }
 
     if (
       validation.value.eventId !== undefined ||
@@ -522,7 +595,9 @@ export const getTicketInputOptions = async () => {
         MIN(ss.id)::int AS id,
         ss.venue_id,
         v.name AS venue_name,
-        ss.name
+        ss.name,
+        ARRAY_AGG(DISTINCT NULLIF(BTRIM(ss.row_label), ''))
+          FILTER (WHERE BTRIM(ss.row_label) <> '') AS row_labels
       FROM seat_sections ss
       INNER JOIN venues v ON v.id = ss.venue_id
       GROUP BY ss.venue_id, v.name, ss.name
@@ -534,9 +609,10 @@ export const getTicketInputOptions = async () => {
       ORDER BY
         CASE name
           WHEN 'Draft' THEN 1
-          WHEN 'Needs pricing' THEN 2
-          WHEN 'Listed' THEN 3
-          WHEN 'Sold' THEN 4
+          WHEN 'Active' THEN 2
+          WHEN 'Needs pricing' THEN 3
+          WHEN 'Listed' THEN 4
+          WHEN 'Sold' THEN 5
           ELSE 5
         END,
         name ASC
@@ -579,6 +655,7 @@ export const getTicketInputOptions = async () => {
       venueId: Number(row.venue_id),
       venueName: row.venue_name,
       name: row.name,
+      rowLabels: (row.row_labels ?? []).filter(Boolean).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
     })),
     marketplaceStatuses: statusesResult.rows.map((row) => ({
       id: Number(row.id),
@@ -611,7 +688,7 @@ export const getDashboardSnapshot = async (user) => {
         WHERE t.user_id = $1
       )
       SELECT
-        (SELECT COUNT(*)::int FROM tickets WHERE user_id = $1 AND marketplace_status_id = (SELECT id FROM marketplace_statuses WHERE name = 'Listed')) AS listed_tickets,
+        (SELECT COUNT(*)::int FROM tickets t_count INNER JOIN marketplace_statuses ms_count ON ms_count.id = t_count.marketplace_status_id WHERE t_count.user_id = $1 AND ms_count.name IN ('Active', 'Listed')) AS listed_tickets,
         (SELECT COUNT(*)::int FROM sold_ticket_costs) AS sold_tickets,
         COALESCE(SUM(payout_amount), 0)::float AS total_payout,
         COALESCE(SUM(CASE WHEN is_terminal = TRUE THEN payout_amount ELSE 0 END), 0)::float AS payout_received,

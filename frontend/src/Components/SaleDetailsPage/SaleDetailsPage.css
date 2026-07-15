@@ -1,0 +1,10 @@
+.sale-details-page { max-width: 920px; margin: 0 auto; }
+.sale-detail-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; border-bottom: 1px solid #343c45; padding-bottom: 20px; }
+.sale-detail-header h2 { margin: 3px 0; font-size: 1.45rem; }
+.sale-detail-header > div > span { color: #89949f; font-size: .8rem; }
+.sale-back-button { margin: 0 0 15px; border: 0; padding: 0; background: transparent; color: #aab3bc; font-size: .8rem; }
+.sale-back-button:hover { color: #f3ab3c; }
+.sale-detail-feedback { margin-bottom: 18px; }
+.sale-detail-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; border-top: 1px solid #343c45; padding-top: 18px; }
+.sale-detail-state { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
+@media (max-width: 620px) { .sale-detail-header { align-items: flex-start; flex-direction: column; } .sale-detail-actions { align-items: stretch; flex-direction: column-reverse; } }
