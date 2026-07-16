@@ -7,26 +7,27 @@ Ticket operations application with:
 
 ## Start everything with one command
 
-Docker Compose runs PostgreSQL, the backend, and the frontend together. From this
-repository directory, use:
+Docker Compose runs PostgreSQL, the backend, and the frontend together. The
+commands below assume the terminal is opened in the outer `LisTix` workspace
+folder (`...\\Visual Studio Code Projects\\LisTix`), as in the PowerShell examples.
 
-```bash
-docker compose up --build -d
+```powershell
+docker compose -f .\LisTix\docker-compose.yml up --build -d
 ```
 
 Open [http://localhost:4173](http://localhost:4173). To stop all three services:
 
-```bash
-docker compose down
+```powershell
+docker compose -f .\LisTix\docker-compose.yml down
 ```
 
 To restart and rebuild all three services after code or configuration changes:
 
-```bash
-docker compose up --build -d --force-recreate
+```powershell
+docker compose -f .\LisTix\docker-compose.yml up --build -d --force-recreate
 ```
 
-`docker compose down` keeps the PostgreSQL volume, so user data remains available
+`docker compose -f .\LisTix\docker-compose.yml down` keeps the PostgreSQL volume, so user data remains available
 the next time the stack starts.
 
 ## Setup
