@@ -31,3 +31,4 @@
 .add-link-button { justify-self: start; }
 .transfer-error { margin-top: 12px; }
 @media (max-width: 720px) { .sale-row-actions { align-items: flex-end; flex-direction: column; } .copy-details { grid-template-columns: 1fr; } .sale-details-content dl > div { grid-template-columns: 1fr; gap: 3px; } }
+.sale-status-cell { display: grid; justify-items: start; gap: 5px; }.sale-status-cell small { color: #7f8a95; font-size: .62rem; line-height: 1.35; }

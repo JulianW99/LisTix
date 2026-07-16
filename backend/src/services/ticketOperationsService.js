@@ -1,5 +1,6 @@
 import { pool } from "../db/pool.js";
 import { validateCreateTicketInput } from "../schemas/createTicketInputSchema.js";
+import { recordActivity } from "./accountAccessService.js";
 
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -9,6 +10,7 @@ const ticketSelectSql = `
   SELECT
     t.id,
     t.user_id,
+    t.account_id,
     t.ticket_code,
     t.event_id,
     e.event_name,
@@ -48,6 +50,7 @@ const ticketSelectSql = `
             WHERE other.event_id = t.event_id
               AND other.section_id = t.section_id
               AND other.id <> t.id
+              AND other.account_id = t.account_id
               AND other_status.name IN ('Active', 'Listed')
           )
         ) ORDER BY bc.name
@@ -61,6 +64,9 @@ const ticketSelectSql = `
     t.purchase_price,
     t.asking_price,
     t.notes,
+    t.last_edited_at,
+    editor.display_name AS last_edited_by_name,
+    editor.email AS last_edited_by_email,
     t.created_at,
     t.updated_at
   FROM tickets t
@@ -70,11 +76,13 @@ const ticketSelectSql = `
   INNER JOIN seat_sections ss ON ss.id = t.section_id
   INNER JOIN marketplace_statuses ms ON ms.id = t.marketplace_status_id
   LEFT JOIN ticket_restrictions tr ON tr.id = t.restriction_id
+  LEFT JOIN users editor ON editor.id = t.last_edited_by_user_id
 `;
 
 const mapTicketRow = (row) => ({
   databaseId: Number(row.id),
   userId: row.user_id === null ? null : Number(row.user_id),
+  accountId: Number(row.account_id),
   id: row.ticket_code,
   ticketCode: row.ticket_code,
   eventId: Number(row.event_id),
@@ -102,6 +110,9 @@ const mapTicketRow = (row) => ({
   purchasePrice: toNumber(row.purchase_price),
   askingPrice: toNumber(row.asking_price),
   notes: row.notes,
+  lastEditedBy: row.last_edited_by_name || null,
+  lastEditedByEmail: row.last_edited_by_email || null,
+  lastEditedAt: row.last_edited_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -144,6 +155,9 @@ const soldOrderSelectSql = `
     so.payout_amount,
     so.customer_name,
     so.buyer_email,
+    so.sent_at,
+    sender.display_name AS sent_by_name,
+    sender.email AS sent_by_email,
     so.created_at,
     so.updated_at
   FROM sold_orders so
@@ -153,6 +167,7 @@ const soldOrderSelectSql = `
   INNER JOIN seat_sections ss ON ss.id = t.section_id
   INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
   INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
+  LEFT JOIN users sender ON sender.id = so.sent_by_user_id
 `;
 
 export const mapSoldOrderRow = (row) => ({
@@ -191,6 +206,9 @@ export const mapSoldOrderRow = (row) => ({
       : 0,
   customerName: row.customer_name,
   buyerEmail: row.buyer_email,
+  sentBy: row.sent_by_name || null,
+  sentByEmail: row.sent_by_email || null,
+  sentAt: row.sent_at,
   ticketType: row.ticket_type,
   restrictions: row.restriction_names ?? [],
   createdAt: row.created_at,
@@ -200,9 +218,9 @@ export const mapSoldOrderRow = (row) => ({
 export const listTickets = async (user) => {
   const result = await pool.query(`
     ${ticketSelectSql}
-    WHERE t.user_id = $1
+    WHERE t.account_id = $1
     ORDER BY e.event_date ASC, t.ticket_code ASC
-  `, [user.sub]);
+  `, [user.accountId]);
 
   return result.rows.map(mapTicketRow);
 };
@@ -214,18 +232,18 @@ export const getTicketByIdentifier = async (identifier, user) => {
     ? await pool.query(
         `
           ${ticketSelectSql}
-          WHERE (t.id = $1 OR t.ticket_code = $2) AND t.user_id = $3
+          WHERE (t.id = $1 OR t.ticket_code = $2) AND t.account_id = $3
           LIMIT 1
         `,
-        [Number(textIdentifier), textIdentifier, user.sub],
+        [Number(textIdentifier), textIdentifier, user.accountId],
       )
     : await pool.query(
         `
           ${ticketSelectSql}
-          WHERE t.ticket_code = $1 AND t.user_id = $2
+          WHERE t.ticket_code = $1 AND t.account_id = $2
           LIMIT 1
         `,
-        [textIdentifier, user.sub],
+        [textIdentifier, user.accountId],
       );
 
   return result.rows[0] ? mapTicketRow(result.rows[0]) : null;
@@ -239,19 +257,19 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
         `
           SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
           FROM tickets
-          WHERE (id = $1 OR ticket_code = $2) AND user_id = $3
+          WHERE (id = $1 OR ticket_code = $2) AND account_id = $3
           LIMIT 1
         `,
-        [Number(textIdentifier), textIdentifier, user.sub],
+        [Number(textIdentifier), textIdentifier, user.accountId],
       )
     : await client.query(
         `
           SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
           FROM tickets
-          WHERE ticket_code = $1 AND user_id = $2
+          WHERE ticket_code = $1 AND account_id = $2
           LIMIT 1
         `,
-        [textIdentifier, user.sub],
+        [textIdentifier, user.accountId],
       );
 
   return result.rows[0] ?? null;
@@ -412,10 +430,14 @@ export const createTicket = async (payload, user) => {
           lowest_seat,
           purchase_price,
           asking_price,
-          notes
-          , user_id
+          notes,
+          user_id,
+          account_id,
+          created_by_user_id,
+          last_edited_by_user_id,
+          last_edited_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $16, NOW())
         RETURNING id
       `,
       [
@@ -432,9 +454,20 @@ export const createTicket = async (payload, user) => {
         validation.value.purchasePrice,
         validation.value.askingPrice,
         validation.value.notes ?? null,
+        user.ownerUserId,
+        user.accountId,
         user.sub,
       ],
     );
+
+    await recordActivity(client, {
+      accountId: user.accountId,
+      actorUserId: user.sub,
+      action: "listing.created",
+      entityType: "listing",
+      entityId: result.rows[0].id,
+      metadata: { ticketCode },
+    });
 
     await client.query("COMMIT");
 
@@ -525,12 +558,24 @@ export const updateTicket = async (identifier, payload, user) => {
     const result = await client.query(
       `
         UPDATE tickets
-        SET ${setFragments.join(", ")}, updated_at = NOW()
-        WHERE id = $${values.length + 1}
+        SET ${setFragments.join(", ")},
+            last_edited_by_user_id = $${values.length + 1},
+            last_edited_at = NOW(),
+            updated_at = NOW()
+        WHERE id = $${values.length + 2}
         RETURNING id
       `,
-      [...values, existingTicket.id],
+      [...values, user.sub, existingTicket.id],
     );
+
+    await recordActivity(client, {
+      accountId: user.accountId,
+      actorUserId: user.sub,
+      action: "listing.updated",
+      entityType: "listing",
+      entityId: existingTicket.id,
+      metadata: { changedFields: fields.map(([fieldName]) => fieldName) },
+    });
 
     await client.query("COMMIT");
 
@@ -547,14 +592,27 @@ export const deleteTicket = async (identifier, user) => {
   const client = await pool.connect();
 
   try {
+    await client.query("BEGIN");
     const existingTicket = await getTicketDatabaseRow(client, identifier, user);
 
     if (!existingTicket) {
+      await client.query("ROLLBACK");
       return false;
     }
 
     await client.query("DELETE FROM tickets WHERE id = $1", [existingTicket.id]);
+    await recordActivity(client, {
+      accountId: user.accountId,
+      actorUserId: user.sub,
+      action: "listing.deleted",
+      entityType: "listing",
+      entityId: existingTicket.id,
+    });
+    await client.query("COMMIT");
     return true;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
   } finally {
     client.release();
   }
@@ -563,11 +621,78 @@ export const deleteTicket = async (identifier, user) => {
 export const listSoldOrders = async (user) => {
   const result = await pool.query(`
     ${soldOrderSelectSql}
-    WHERE t.user_id = $1
+    WHERE t.account_id = $1
     ORDER BY so.sold_at DESC, so.order_code ASC
-  `, [user.sub]);
+  `, [user.accountId]);
 
   return result.rows.map(mapSoldOrderRow);
+};
+
+export const getSoldOrderByIdentifier = async (identifier, user) => {
+  const textIdentifier = String(identifier);
+  const isNumericIdentifier = /^\d+$/.test(textIdentifier);
+  const result = isNumericIdentifier
+    ? await pool.query(`
+        ${soldOrderSelectSql}
+        WHERE (so.id = $1 OR so.order_code = $2) AND t.account_id = $3
+        LIMIT 1
+      `, [Number(textIdentifier), textIdentifier, user.accountId])
+    : await pool.query(`
+        ${soldOrderSelectSql}
+        WHERE so.order_code = $1 AND t.account_id = $2
+        LIMIT 1
+      `, [textIdentifier, user.accountId]);
+
+  return result.rows[0] ? mapSoldOrderRow(result.rows[0]) : null;
+};
+
+export const updateSoldOrder = async (identifier, payload, user) => {
+  const dispatchStatusId = Number(payload?.dispatchStatusId);
+
+  if (!Number.isInteger(dispatchStatusId) || dispatchStatusId <= 0) {
+    const error = new Error("A valid dispatch status is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const existingOrder = await getSoldOrderByIdentifier(identifier, user);
+
+  if (!existingOrder) {
+    return null;
+  }
+
+  const result = await pool.query(`
+    UPDATE sold_orders AS so
+    SET dispatch_status_id = $1,
+        sent_by_user_id = CASE WHEN ds.is_terminal THEN $4 ELSE so.sent_by_user_id END,
+        sent_at = CASE WHEN ds.is_terminal THEN NOW() ELSE so.sent_at END,
+        updated_at = NOW()
+    FROM dispatch_statuses AS ds, tickets AS t
+    WHERE so.id = $2
+      AND ds.id = $1
+      AND so.ticket_id = t.id
+      AND t.account_id = $3
+    RETURNING so.id
+  `, [dispatchStatusId, existingOrder.databaseId, user.accountId, user.sub]);
+
+  if (result.rowCount === 0) {
+    const error = new Error("Selected dispatch status does not exist.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const updatedOrder = await getSoldOrderByIdentifier(result.rows[0].id, user);
+  if (updatedOrder?.dispatchComplete) {
+    await recordActivity(pool, {
+      accountId: user.accountId,
+      actorUserId: user.sub,
+      action: "sale.sent",
+      entityType: "sale",
+      entityId: updatedOrder.databaseId,
+      metadata: { orderCode: updatedOrder.orderCode },
+    });
+  }
+  return updatedOrder;
 };
 
 export const getTicketInputOptions = async () => {
@@ -685,17 +810,17 @@ export const getDashboardSnapshot = async (user) => {
         FROM sold_orders so
         INNER JOIN tickets t ON t.id = so.ticket_id
         INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
-        WHERE t.user_id = $1
+        WHERE t.account_id = $1
       )
       SELECT
-        (SELECT COUNT(*)::int FROM tickets t_count INNER JOIN marketplace_statuses ms_count ON ms_count.id = t_count.marketplace_status_id WHERE t_count.user_id = $1 AND ms_count.name IN ('Active', 'Listed')) AS listed_tickets,
+        (SELECT COUNT(*)::int FROM tickets t_count INNER JOIN marketplace_statuses ms_count ON ms_count.id = t_count.marketplace_status_id WHERE t_count.account_id = $1 AND ms_count.name IN ('Active', 'Listed')) AS listed_tickets,
         (SELECT COUNT(*)::int FROM sold_ticket_costs) AS sold_tickets,
         COALESCE(SUM(payout_amount), 0)::float AS total_payout,
         COALESCE(SUM(CASE WHEN is_terminal = TRUE THEN payout_amount ELSE 0 END), 0)::float AS payout_received,
         COALESCE(SUM(total_purchase_price), 0)::float AS cost_of_sold_tickets,
-        COALESCE((SELECT SUM(quantity) FROM tickets WHERE user_id = $1), 0)::int AS tickets_in_inventory
+        COALESCE((SELECT SUM(quantity) FROM tickets WHERE account_id = $1), 0)::int AS tickets_in_inventory
       FROM sold_ticket_costs
-    `, [user.sub]),
+    `, [user.accountId]),
     pool.query(`
       SELECT
           EXTRACT(MONTH FROM so.sold_at)::int AS sales_month,
@@ -705,10 +830,10 @@ export const getDashboardSnapshot = async (user) => {
       FROM sold_orders so
       INNER JOIN tickets t ON t.id = so.ticket_id
       WHERE EXTRACT(YEAR FROM so.sold_at)::int = EXTRACT(YEAR FROM NOW())::int
-        AND t.user_id = $1
+        AND t.account_id = $1
       GROUP BY sales_month
       ORDER BY sales_month ASC
-    `, [user.sub]),
+    `, [user.accountId]),
     pool.query(`
       SELECT
         bc.name,
@@ -716,10 +841,10 @@ export const getDashboardSnapshot = async (user) => {
       FROM sold_orders so
       INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
       INNER JOIN tickets t ON t.id = so.ticket_id
-      WHERE t.user_id = $1
+      WHERE t.account_id = $1
       GROUP BY bc.name
       ORDER BY count DESC
-    `, [user.sub]),
+    `, [user.accountId]),
   ]);
 
   const summary = summaryResult.rows[0] || {};

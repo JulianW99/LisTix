@@ -9,9 +9,13 @@ export const createSoldOrdersTableSql = `
     payout_amount NUMERIC(10, 2) NOT NULL CHECK (payout_amount >= 0),
     customer_name VARCHAR(255) NOT NULL,
     buyer_email VARCHAR(255),
+    sent_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    sent_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
 
   ALTER TABLE sold_orders ADD COLUMN IF NOT EXISTS buyer_email VARCHAR(255);
+  ALTER TABLE sold_orders ADD COLUMN IF NOT EXISTS sent_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+  ALTER TABLE sold_orders ADD COLUMN IF NOT EXISTS sent_at TIMESTAMPTZ;
 `;

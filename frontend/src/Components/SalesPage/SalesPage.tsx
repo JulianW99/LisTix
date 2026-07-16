@@ -4,6 +4,7 @@ import { useApi } from "../../Context/ApiContext";
 import { formatCurrency } from "../../Functions/formatCurrency";
 import { formatDate } from "../../Functions/formatDate";
 import { getSoldDisplayStatus } from "../../Functions/getSoldDisplayStatus";
+import { hasPermission } from "../../Functions/hasPermission";
 import type { SoldOrder } from "../../types";
 import { DataTable, type DataTableColumn } from "../DataTable/DataTable";
 import { Modal } from "../Modal/Modal";
@@ -14,17 +15,18 @@ type Filter = "All" | "Delivered" | "Pending Delivery";
 type TransferMethod = "Mobile Transfer" | "PDF-Ticket" | "Mobile Ticket Links";
 const filters: Filter[] = ["All", "Delivered", "Pending Delivery"];
 
-export function SaleDetailsContent({ order }: { order: SoldOrder }) {
+export function SaleDetailsContent({ order, showActor = false }: { order: SoldOrder; showActor?: boolean }) {
   return <div className="sale-details-content">
     <section><h3>Event & Tickets</h3><dl><div><dt>Event</dt><dd>{order.eventName}</dd></div><div><dt>Event date</dt><dd>{formatDate(order.eventDate)}</dd></div><div><dt>Venue</dt><dd>{order.venueName}</dd></div><div><dt>Section / Row</dt><dd>{order.section} · {order.rowLabel || "-"}</dd></div><div><dt>Seats</dt><dd>{order.seatLabel || `${order.quantity} ticket(s)`}</dd></div><div><dt>Ticket Type</dt><dd>{order.ticketType || "Not specified"}</dd></div><div><dt>Restrictions</dt><dd>{order.restrictions?.length ? order.restrictions.join(", ") : "None"}</dd></div></dl></section>
     <section><h3>Buyer</h3><dl><div><dt>Full name</dt><dd>{order.customerName}</dd></div><div><dt>Email</dt><dd>{order.buyerEmail || "Not provided"}</dd></div></dl></section>
-    <section><h3>Sale & Delivery</h3><dl><div><dt>Order</dt><dd>{order.orderCode}</dd></div><div><dt>Marketplace</dt><dd>{order.buyerChannel}</dd></div><div><dt>Sale price</dt><dd>{formatCurrency(order.payoutAmount)}</dd></div><div><dt>Sold date</dt><dd>{formatDate(order.soldAt)}</dd></div><div><dt>Status</dt><dd><StatusBadge status={getSoldDisplayStatus(order)} /></dd></div></dl></section>
+    <section><h3>Sale & Delivery</h3><dl><div><dt>Order</dt><dd>{order.orderCode}</dd></div><div><dt>Marketplace</dt><dd>{order.buyerChannel}</dd></div><div><dt>Sale price</dt><dd>{formatCurrency(order.payoutAmount)}</dd></div><div><dt>Sold date</dt><dd>{formatDate(order.soldAt)}</dd></div><div><dt>Status</dt><dd><StatusBadge status={getSoldDisplayStatus(order)} /></dd></div>{showActor && <div><dt>Sent by</dt><dd>{order.sentBy ? `${order.sentBy}${order.sentAt ? ` · ${formatDate(order.sentAt)}` : ""}` : "Not sent yet"}</dd></div>}</dl></section>
   </div>;
 }
 
 export function SalesPage() {
-  const { soldOrders, ticketOptions, loadSoldOrders, loadTicketOptions, completeSale } = useApi();
+  const { user, soldOrders, ticketOptions, loadSoldOrders, loadTicketOptions, completeSale } = useApi();
   const navigate = useNavigate(); const orders = soldOrders ?? []; const [filter, setFilter] = useState<Filter>("All"); const [transferOrder, setTransferOrder] = useState<SoldOrder | null>(null); const [message, setMessage] = useState("");
+  const showActor = Boolean(user?.account?.multiUserEnabled);
   useEffect(() => { void loadSoldOrders(); void loadTicketOptions(); }, [loadSoldOrders, loadTicketOptions]);
   const rows = useMemo(() => orders.filter((order) => filter === "All" || getSoldDisplayStatus(order) === filter).sort((a, b) => Date.parse(b.soldAt) - Date.parse(a.soldAt)), [filter, orders]);
   const columns: DataTableColumn<SoldOrder>[] = [
@@ -34,8 +36,8 @@ export function SalesPage() {
     { key: "seats", header: "Seats", render: (order) => <><strong>{order.section}, row {order.rowLabel || "-"}</strong><small>{order.seatLabel || `${order.quantity} ticket(s)`}</small></> },
     { key: "payout", header: "Payout", className: "numeric-column", render: (order) => formatCurrency(order.payoutAmount) },
     { key: "platform", header: "Platform", render: (order) => order.buyerChannel },
-    { key: "status", header: "Status", render: (order) => <StatusBadge status={getSoldDisplayStatus(order)} /> },
-    { key: "actions", header: <span className="visually-hidden">Actions</span>, className: "sale-actions-column", render: (order) => <div className="sale-row-actions"><button className="secondary-button" type="button" onClick={() => navigate(`/sales/${order.databaseId}`)}>Details</button>{getSoldDisplayStatus(order) === "Pending Delivery" && <button className="primary-button" type="button" onClick={() => setTransferOrder(order)}>Transfer Tickets</button>}</div> },
+    { key: "status", header: "Status", render: (order) => <span className="sale-status-cell"><StatusBadge status={getSoldDisplayStatus(order)} />{showActor && order.sentBy && <small>Sent by {order.sentBy}<br />{order.sentAt ? formatDate(order.sentAt) : ""}</small>}</span> },
+    { key: "actions", header: <span className="visually-hidden">Actions</span>, className: "sale-actions-column", render: (order) => <div className="sale-row-actions"><button className="secondary-button" type="button" onClick={() => navigate(`/sales/${order.databaseId}`)}>Details</button>{getSoldDisplayStatus(order) === "Pending Delivery" && hasPermission(user, "sales.fulfill") && <button className="primary-button" type="button" onClick={() => setTransferOrder(order)}>Transfer Tickets</button>}</div> },
   ];
   return <section className="panel page-panel sales-page"><div className="page-header"><div><h2>Sales queue</h2><p>Track delivered and pending ticket transfers.</p></div><span className="muted">{rows.length} orders</span></div>{message && <p className="success-message sales-feedback">{message}</p>}<div className="filter-row">{filters.map((item) => <button key={item} className={filter === item ? "filter-button active" : "filter-button"} type="button" onClick={() => setFilter(item)}>{item}</button>)}</div><DataTable columns={columns} rows={rows} rowKey={(order) => order.databaseId} emptyMessage="No sales match this filter." />{transferOrder && <TransferModal order={transferOrder} completedStatusId={ticketOptions?.dispatchStatuses.find((status) => status.name === "Completed")?.id} onClose={() => setTransferOrder(null)} onComplete={async (statusId) => { await completeSale(transferOrder.databaseId, statusId); setMessage(`${transferOrder.orderCode} marked as delivered.`); setTransferOrder(null); }} />}</section>;
 }

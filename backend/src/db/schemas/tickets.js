@@ -14,6 +14,11 @@ export const createTicketsTableSql = `
     purchase_price NUMERIC(10, 2) NOT NULL CHECK (purchase_price >= 0),
     asking_price NUMERIC(10, 2) NOT NULL CHECK (asking_price >= 0),
     notes TEXT,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    last_edited_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    last_edited_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
@@ -31,6 +36,18 @@ export const createTicketsTableSql = `
     ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
 
   ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS account_id INTEGER REFERENCES accounts(id) ON DELETE CASCADE;
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS created_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS last_edited_by_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL;
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS last_edited_at TIMESTAMPTZ;
+
+  ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS restriction_ids INTEGER[] NOT NULL DEFAULT '{}';
 
   ALTER TABLE tickets
@@ -41,4 +58,5 @@ export const createTicketsTableSql = `
   WHERE restriction_id IS NOT NULL AND cardinality(restriction_ids) = 0;
 
   CREATE INDEX IF NOT EXISTS tickets_user_id_idx ON tickets(user_id);
+  CREATE INDEX IF NOT EXISTS tickets_account_id_idx ON tickets(account_id);
 `;

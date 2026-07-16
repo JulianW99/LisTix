@@ -6,6 +6,7 @@ import {
   listEntities,
   updateEntity,
 } from "../services/entityRepository.js";
+import { hasPermission } from "../services/accountAccessService.js";
 
 const isNumericId = (value) => /^\d+$/.test(String(value));
 
@@ -19,11 +20,23 @@ const requireNumericId = (definition, id) => {
   throw error;
 };
 
+const requireDefinitionPermission = (definition, action, user) => {
+  const required = definition.permissions?.[action];
+  if (!required) return;
+  const permissions = Array.isArray(required) ? required : [required];
+  if (!permissions.some((permission) => hasPermission(user, permission))) {
+    const error = new Error("You do not have permission for this action.");
+    error.statusCode = 403;
+    throw error;
+  }
+};
+
 export const createEntityCrudRoutes = (definition) => {
   const router = Router();
 
   router.get("/", async (req, res, next) => {
     try {
+      requireDefinitionPermission(definition, "list", req.user);
       const items = await listEntities(definition, req.user);
       return res.json({ items });
     } catch (error) {
@@ -33,6 +46,7 @@ export const createEntityCrudRoutes = (definition) => {
 
   router.get("/:id", async (req, res, next) => {
     try {
+      requireDefinitionPermission(definition, "get", req.user);
       requireNumericId(definition, req.params.id);
       const item = await getEntity(definition, req.params.id, req.user);
 
@@ -48,7 +62,8 @@ export const createEntityCrudRoutes = (definition) => {
 
   router.post("/", async (req, res, next) => {
     try {
-      if (definition.readOnly) {
+      requireDefinitionPermission(definition, "create", req.user);
+      if (definition.readOnly || definition.allowCreate === false) {
         return res.status(405).json({ message: `${definition.label} is read-only.` });
       }
 
@@ -61,7 +76,8 @@ export const createEntityCrudRoutes = (definition) => {
 
   router.put("/:id", async (req, res, next) => {
     try {
-      if (definition.readOnly) {
+      requireDefinitionPermission(definition, "update", req.user);
+      if (definition.readOnly || definition.allowUpdate === false) {
         return res.status(405).json({ message: `${definition.label} is read-only.` });
       }
 
@@ -80,7 +96,8 @@ export const createEntityCrudRoutes = (definition) => {
 
   router.delete("/:id", async (req, res, next) => {
     try {
-      if (definition.readOnly) {
+      requireDefinitionPermission(definition, "delete", req.user);
+      if (definition.readOnly || definition.allowDelete === false) {
         return res.status(405).json({ message: `${definition.label} is read-only.` });
       }
 

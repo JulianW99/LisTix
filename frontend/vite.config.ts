@@ -6,9 +6,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      // Proxy all API requests to the backend server
       "/api": {
-        target: "http://127.0.0.1:4010", // The address your backend is listening on
+        target: process.env.VITE_API_PROXY_TARGET || "http://127.0.0.1:4010",
         changeOrigin: true,
       },
     },

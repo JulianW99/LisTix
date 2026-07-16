@@ -1,3 +1,8 @@
+import { env } from "../../config/env.js";
+import { demoUserAccounts } from "./applicationUsers.js";
+
+const [alexDemoUser, jamieDemoUser, taylorDemoUser] = demoUserAccounts;
+
 const eventCategories = [
   {
     name: "Concert",
@@ -240,6 +245,7 @@ const ticketRestrictions = [
 const tickets = [
   {
     ticketCode: "TCK-1001",
+    ownerEmail: env.adminUser.email,
     eventName: "Taylor Swift - Berlin",
     sectionName: "Block 112",
     marketplaceStatusName: "Draft",
@@ -253,6 +259,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1002",
+    ownerEmail: alexDemoUser.email,
     eventName: "Drake - Amsterdam",
     sectionName: "Floor A",
     marketplaceStatusName: "Listed",
@@ -266,6 +273,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1003",
+    ownerEmail: jamieDemoUser.email,
     eventName: "Coldplay - Munich",
     sectionName: "Block L1",
     marketplaceStatusName: "Needs pricing",
@@ -279,6 +287,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1004",
+    ownerEmail: taylorDemoUser.email,
     eventName: "Champions League Final Screening",
     sectionName: "Lower 101",
     marketplaceStatusName: "Listed",
@@ -292,6 +301,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1005",
+    ownerEmail: env.adminUser.email,
     eventName: "Ed Sheeran - London",
     sectionName: "Block 502",
     marketplaceStatusName: "Listed",
@@ -305,6 +315,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1006",
+    ownerEmail: alexDemoUser.email,
     eventName: "Billie Eilish - New York",
     sectionName: "Section 101",
     marketplaceStatusName: "Draft",
@@ -318,6 +329,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1007",
+    ownerEmail: jamieDemoUser.email,
     eventName: "Taylor Swift - Berlin",
     sectionName: "Block 305",
     marketplaceStatusName: "Sold",
@@ -331,6 +343,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1008",
+    ownerEmail: taylorDemoUser.email,
     eventName: "Ed Sheeran - London",
     sectionName: "Block 502",
     marketplaceStatusName: "Listed",
@@ -344,6 +357,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1009",
+    ownerEmail: env.adminUser.email,
     eventName: "Billie Eilish - New York",
     sectionName: "Section 101",
     marketplaceStatusName: "Sold",
@@ -357,6 +371,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1010",
+    ownerEmail: alexDemoUser.email,
     eventName: "Drake - Amsterdam",
     sectionName: "Floor A",
     marketplaceStatusName: "Needs pricing",
@@ -370,6 +385,7 @@ const tickets = [
   },
   {
     ticketCode: "TCK-1011",
+    ownerEmail: jamieDemoUser.email,
     eventName: "Coldplay - Munich",
     sectionName: "Block L1",
     marketplaceStatusName: "Draft",
@@ -464,7 +480,7 @@ const indexBy = (items, key) =>
     return result;
   }, {});
 
-export const seedDemoData = async (client) => {
+export const seedDemoData = async (client, { includeOperations = true } = {}) => {
   console.log("🌱 Starting to seed demo data...");
 
   try {
@@ -638,14 +654,29 @@ export const seedDemoData = async (client) => {
       return result;
     }, {});
 
+    if (!includeOperations) {
+      console.log("   - Skipped demo listings, sales, and payments.");
+      return;
+    }
+
+    const ownerEmails = [...new Set(tickets.map((ticket) => ticket.ownerEmail.toLowerCase().trim()))];
     const ownerRows = await client.query(`
-      SELECT id FROM users
-      WHERE email = ANY($1::text[])
-      ORDER BY array_position($1::text[], email)
-    `, [["admin@ticketadmin.local", "demo.alex@listix.local", "demo.jamie@listix.local", "demo.taylor@listix.local"]]);
-    const ownerIds = ownerRows.rows.map((row) => Number(row.id));
+      SELECT u.id, u.email, a.id AS account_id
+      FROM users u
+      INNER JOIN accounts a ON a.owner_user_id = u.id
+      WHERE u.email = ANY($1::text[])
+    `, [ownerEmails]);
+    const owners = new Map(ownerRows.rows.map((row) => [row.email, {
+      userId: Number(row.id),
+      accountId: Number(row.account_id),
+    }]));
+
+    if (owners.size !== ownerEmails.length) {
+      throw new Error("Cannot seed demo operations because one or more owners are missing.");
+    }
+
     const ticketRows = [];
-    for (const [ticketIndex, ticket] of tickets.entries()) {
+    for (const ticket of tickets) {
       const eventId = eventIds[ticket.eventName];
       const venueId = eventVenueIds[ticket.eventName];
       const result = await client.query(
@@ -664,9 +695,13 @@ export const seedDemoData = async (client) => {
             purchase_price,
             asking_price,
             notes,
-            user_id
+            user_id,
+            account_id,
+            created_by_user_id,
+            last_edited_by_user_id,
+            last_edited_at
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $14, $14, NOW())
           ON CONFLICT (ticket_code) DO UPDATE SET
             event_id = EXCLUDED.event_id,
             section_id = EXCLUDED.section_id,
@@ -681,8 +716,9 @@ export const seedDemoData = async (client) => {
             asking_price = EXCLUDED.asking_price,
             notes = EXCLUDED.notes,
             user_id = EXCLUDED.user_id,
+            account_id = EXCLUDED.account_id,
             updated_at = NOW()
-          RETURNING id, ticket_code
+          RETURNING id, ticket_code, user_id
         `,
         [
           ticket.ticketCode,
@@ -698,7 +734,8 @@ export const seedDemoData = async (client) => {
           ticket.purchasePrice,
           ticket.askingPrice,
           ticket.notes,
-          ownerIds[ticketIndex % ownerIds.length],
+          owners.get(ticket.ownerEmail.toLowerCase().trim()).userId,
+          owners.get(ticket.ownerEmail.toLowerCase().trim()).accountId,
         ],
       );
       ticketRows.push(result.rows[0]);
@@ -718,9 +755,11 @@ export const seedDemoData = async (client) => {
             sold_at,
             payout_amount,
             customer_name,
-            buyer_email
+            buyer_email,
+            sent_by_user_id,
+            sent_at
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           ON CONFLICT (order_code) DO UPDATE SET
             ticket_id = EXCLUDED.ticket_id,
             buyer_channel_id = EXCLUDED.buyer_channel_id,
@@ -740,6 +779,10 @@ export const seedDemoData = async (client) => {
           order.payoutAmount,
           order.customerName,
           `${order.customerName.toLowerCase().replace(/\s+/g, ".")}@buyer.example`,
+          order.dispatchStatusName === "Completed"
+            ? ticketRows.find((ticket) => ticket.ticket_code === order.ticketCode)?.user_id
+            : null,
+          order.dispatchStatusName === "Completed" ? order.soldAt : null,
         ],
       );
     }

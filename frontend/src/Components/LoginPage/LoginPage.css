@@ -1,5 +1,6 @@
 .login-page { display: grid; place-items: center; min-height: 100dvh; padding: 20px; background: #111418; }
 .login-panel { width: min(430px, 100%); padding: 34px; }
 .login-panel h1 { margin-bottom: 8px; font-size: 1.65rem; }
-.login-logo { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 22px; border-radius: 7px; background: #f3ab3c; color: #19130a; font-weight: 900; }
+.login-logo { display: block; width: 152px; height: 65px; margin-bottom: 22px; border-radius: 9px; padding: 7px 9px; background: #f3f2ed; object-fit: contain; }
 .login-panel form { display: grid; gap: 15px; margin-top: 24px; }
+.login-back { position: absolute; top: 25px; left: 28px; color: #aab3bc; font-size: .82rem; text-decoration: none; }.login-back:hover { color: #f3ab3c; }

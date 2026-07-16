@@ -3,7 +3,8 @@
 .dashboard-stat span, .dashboard-stat strong { display: block; }
 .dashboard-stat span { color: #8f9aa5; font-size: .78rem; }
 .dashboard-stat strong { margin-top: 8px; font-size: 1.45rem; }
-.chart-bars { display: grid; grid-template-columns: repeat(12, minmax(46px, 1fr)); gap: 10px; min-height: 270px; }
+.dashboard-chart { width: 100%; }
+.dashboard-chart .chart-bars { display: grid; grid-template-columns: repeat(12, minmax(46px, 1fr)); gap: 10px; width: 100%; min-height: 270px; }
 .chart-column { display: grid; grid-template-rows: 22px 1fr auto auto; gap: 5px; min-width: 0; text-align: center; }
 .chart-value, .chart-column small { color: #8f9aa5; font-size: .68rem; overflow: hidden; text-overflow: ellipsis; }
 .chart-track { position: relative; min-height: 190px; border-radius: 4px; background: #22282f; }
@@ -17,4 +18,4 @@
 .platform-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .platform-summary div { display: flex; justify-content: space-between; padding: 12px; border: 1px solid #303840; border-radius: 6px; background: #20262c; }
 @media (max-width: 1200px) { .dashboard-stats { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 720px) { .dashboard-stats { grid-template-columns: repeat(2, 1fr); } .chart-bars { overflow-x: auto; } }
+@media (max-width: 720px) { .dashboard-stats { grid-template-columns: repeat(2, 1fr); } .dashboard-chart .chart-bars { overflow-x: auto; } }

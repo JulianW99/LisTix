@@ -3,6 +3,9 @@ export type User = {
   email: string;
   displayName: string;
   role: string;
+  account: { id: number; name: string; ownerUserId: number; multiUserEnabled: boolean } | null;
+  accountRole: string;
+  permissions: string[];
   profileSettings: ProfileSettings;
   createdAt: string;
 };
@@ -117,6 +120,7 @@ export type DashboardData = {
 export type TicketItem = {
   databaseId: number;
   userId: number | null;
+  accountId: number;
   id: string;
   ticketCode: string;
   eventId: number;
@@ -144,6 +148,9 @@ export type TicketItem = {
   rowLabel: string;
   seatLabel: string;
   notes: string | null;
+  lastEditedBy: string | null;
+  lastEditedByEmail: string | null;
+  lastEditedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -179,6 +186,9 @@ export type SoldOrder = {
   roi: number;
   customerName: string;
   buyerEmail?: string | null;
+  sentBy: string | null;
+  sentByEmail: string | null;
+  sentAt: string | null;
   ticketType?: "Mobile ticket transfer" | "PDF-Ticket";
   restrictions?: string[];
   createdAt: string;
@@ -200,6 +210,17 @@ export type TicketSectionOption = {
   venueName: string;
   name: string;
   rowLabels: string[];
+};
+
+export type DiscordConnection = {
+  connected: boolean;
+  id?: string;
+  username?: string;
+  displayName?: string;
+  email?: string | null;
+  avatarUrl?: string | null;
+  connectedAt?: string;
+  lastLoginAt?: string | null;
 };
 
 export type MarketplaceStatusOption = {
@@ -242,4 +263,45 @@ export type UpdateTicketInput = Partial<CreateTicketInput>;
 export type UpdateMeInput = {
   displayName: string;
   profileSettings: ProfileSettings;
+};
+
+export type TeamMember = {
+  id: number;
+  userId: number | null;
+  email: string;
+  displayName: string;
+  role: "owner" | "administrator" | "manager" | "moderator" | "viewer";
+  permissions: string[];
+  status: "pending" | "active" | "suspended" | "revoked";
+  invitedBy: string | null;
+  invitationExpiresAt: string | null;
+  acceptedAt: string | null;
+  lastSeenAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TeamConfiguration = {
+  account: { id: number; name: string; multiUserEnabled: boolean };
+  members: TeamMember[];
+  roles: Array<{ role: Exclude<TeamMember["role"], "owner">; permissions: string[] }>;
+  permissions: string[];
+};
+
+export type ActivityItem = {
+  id: number;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  metadata: Record<string, unknown>;
+  actorName: string;
+  actorEmail: string | null;
+  createdAt: string;
+};
+
+export type InvitationDetails = {
+  email: string;
+  role: string;
+  accountName: string;
+  expiresAt: string;
 };

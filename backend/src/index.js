@@ -9,7 +9,7 @@ const start = async () => {
     await bootstrapDatabase();
 
     // 2. Then, start the HTTP server.
-    return app.listen(env.port, () => {
+    return app.listen(env.port, env.host, () => {
       console.log(`✅ Backend listening on port ${env.port}`);
     });
   } catch (error) {

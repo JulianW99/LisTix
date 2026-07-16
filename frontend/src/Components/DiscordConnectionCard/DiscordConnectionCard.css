@@ -1,0 +1,27 @@
+.discord-connection-card {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid #3b4350;
+  border-radius: 9px;
+  padding: 15px;
+  background: #20262d;
+}
+.discord-mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #5865f2; color: #fff; font-weight: 900; }
+.discord-connection-copy { min-width: 0; }
+.discord-connection-copy strong, .discord-connection-copy span, .discord-connection-copy small { display: block; }
+.discord-connection-copy span { margin-top: 3px; color: #aeb7c0; font-size: .76rem; }
+.discord-connection-copy small { margin-top: 3px; overflow: hidden; color: #77828d; font-size: .65rem; text-overflow: ellipsis; white-space: nowrap; }
+.discord-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; }
+.discord-button { min-height: 38px; border: 0; border-radius: 6px; padding: 8px 13px; background: #5865f2; color: #fff; font-weight: 700; cursor: pointer; }
+.discord-button:hover { background: #6875f5; }
+.discord-button:disabled { cursor: not-allowed; opacity: .55; }
+.discord-connection-message { grid-column: 2 / -1; margin: 0; }
+@media (max-width: 700px) {
+  .discord-connection-card { grid-template-columns: auto minmax(0, 1fr); }
+  .discord-avatar { grid-column: 1; }
+  .discord-connection-actions { grid-column: 2; }
+  .discord-connection-message { grid-column: 1 / -1; }
+}

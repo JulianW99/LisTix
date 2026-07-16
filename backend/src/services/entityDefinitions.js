@@ -2,8 +2,11 @@ import { mapAuditFields } from "./entityRepository.js";
 import {
   createTicket,
   deleteTicket,
+  getSoldOrderByIdentifier,
   getTicketByIdentifier,
+  listSoldOrders,
   listTickets,
+  updateSoldOrder,
   updateTicket,
 } from "./ticketOperationsService.js";
 
@@ -319,6 +322,13 @@ export const entityDefinitions = [
     routePath: "tickets",
     label: "ticket",
     table: "tickets",
+    permissions: {
+      list: "listings.view",
+      get: "listings.view",
+      create: "listings.create",
+      update: "listings.edit",
+      delete: "listings.delete",
+    },
     fields: [],
     list: listTickets,
     get: getTicketByIdentifier,
@@ -331,6 +341,13 @@ export const entityDefinitions = [
     routePath: "sold-orders",
     label: "sold order",
     table: "sold_orders",
+    allowCreate: false,
+    allowDelete: false,
+    permissions: {
+      list: ["sales.view", "payments.view"],
+      get: ["sales.view", "payments.view"],
+      update: "sales.fulfill",
+    },
     fields: [
       { name: "orderCode", column: "order_code", type: "string", required: true },
       { name: "ticketDatabaseId", column: "ticket_id", type: "integer", required: true },
@@ -341,6 +358,9 @@ export const entityDefinitions = [
       { name: "customerName", column: "customer_name", type: "string", required: true },
       { name: "buyerEmail", column: "buyer_email", type: "string" },
     ],
+    list: listSoldOrders,
+    get: getSoldOrderByIdentifier,
+    update: updateSoldOrder,
     listSql: `
       SELECT
         so.id,
