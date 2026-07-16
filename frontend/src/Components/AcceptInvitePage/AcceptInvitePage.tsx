@@ -51,9 +51,9 @@ export function AcceptInvitePage() {
         <Link className="primary-button invite-login" to="/login">Continue to login</Link>
       </> : invitation ? <>
         <span className="invite-icon">✦</span>
-        <p className="eyebrow">Team invitation</p>
+        <p className="eyebrow">{invitation.invitationType === "system_admin" ? "System administration invitation" : "Team invitation"}</p>
         <h1>Join {invitation.accountName}</h1>
-        <p className="muted">You were invited as <strong>{invitation.role}</strong>. Create your personal password to access the shared workspace.</p>
+        <p className="muted">You were invited as <strong>{invitation.role}</strong>. Create your personal password to access {invitation.invitationType === "system_admin" ? "the LisTix system administration" : "the shared workspace"}.</p>
         <form onSubmit={submit}>
           <label className="field"><span>Email</span><input value={invitation.email} disabled /></label>
           <label className="field"><span>Your name</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} minLength={2} required /></label>

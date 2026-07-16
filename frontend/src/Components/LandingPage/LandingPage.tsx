@@ -100,7 +100,7 @@ export function LandingPage() {
           <p className="landing-kicker"><span />Ticket operations, finally connected</p>
           <h1>Every ticket.<br /><em>One clear system.</em></h1>
           <p className="hero-lead">LisTix brings listings, sales, delivery, payouts and your whole operations team into one focused workspace.</p>
-          <div className="hero-actions"><Link className="hero-primary" to="/login">Open your workspace</Link><a className="hero-secondary" href="#features">Explore features ↓</a></div>
+          <div className="hero-actions"><Link className="hero-primary" to="/marketplace">See available events &amp; tickets</Link><Link className="hero-secondary" to="/login">Open your workspace →</Link></div>
           <div className="hero-trust"><span>Live inventory</span><span>Role-based access</span><span>Complete audit trail</span></div>
         </div>
         <div className="hero-visual">

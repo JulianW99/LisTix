@@ -10,7 +10,7 @@ export function DataTable<T>({ columns, rows, rowKey, emptyMessage = "No records
       <table className="data-table">
         <thead><tr>{columns.map((column) => <th key={column.key} className={column.className}>{column.header}</th>)}</tr></thead>
         <tbody>
-          {rows.length ? rows.map((row) => <tr key={rowKey(row)}>{columns.map((column) => <td key={column.key} className={column.className}>{column.render(row)}</td>)}</tr>) : <tr><td className="data-table-empty" colSpan={columns.length}>{emptyMessage}</td></tr>}
+          {rows.length ? rows.map((row) => <tr key={rowKey(row)}>{columns.map((column) => <td key={column.key} className={column.className} data-label={typeof column.header === "string" ? column.header : undefined}>{column.render(row)}</td>)}</tr>) : <tr><td className="data-table-empty" colSpan={columns.length}>{emptyMessage}</td></tr>}
         </tbody>
       </table>
     </div>

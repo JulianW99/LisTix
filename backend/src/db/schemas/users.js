@@ -12,4 +12,13 @@ export const createUsersTableSql = `
 
   ALTER TABLE users
     ADD COLUMN IF NOT EXISTS profile_settings JSONB NOT NULL DEFAULT '{}'::jsonb;
+
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS account_status VARCHAR(30) NOT NULL DEFAULT 'active';
+
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS identity_verification_status VARCHAR(30) NOT NULL DEFAULT 'not_started';
+
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS identity_verified_at TIMESTAMPTZ;
 `;

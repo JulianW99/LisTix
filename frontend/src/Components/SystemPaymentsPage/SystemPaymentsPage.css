@@ -1,0 +1,4 @@
+.payment-status { display: inline-flex; border-radius: 999px; padding: 4px 8px; font-size: .7rem; font-weight: 800; text-transform: capitalize; }
+.payment-status.paid { background: #183b31; color: #82d7b9; }.payment-status.upcoming { background: #222f40; color: #92bceb; }.payment-status.due { background: #3b301c; color: #f6c66c; }.payment-status.error { background: #422327; color: #ff9da5; }
+.fee-amount { color: #f1c66f; }
+.payments-stats .primary-stat { border-color: #397f6d; background: linear-gradient(140deg, #1a2825, #17352d); }

@@ -61,4 +61,7 @@ a { color: inherit; }
   body { overflow: auto; }
   .form-grid { grid-template-columns: 1fr; }
   .page-header { align-items: flex-start; flex-direction: column; }
+  .page-panel { padding: 16px 14px; }
+  .page-stack { gap: 12px; }
+  .primary-button, .secondary-button { min-height: 42px; }
 }

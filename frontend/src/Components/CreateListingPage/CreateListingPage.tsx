@@ -2,15 +2,16 @@ import { useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEven
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApi } from "../../Context/ApiContext";
 import { formatDate } from "../../Functions/formatDate";
-import type { CreateTicketInput, TicketEventOption, TicketItem } from "../../types";
+import { availableSplitTypes } from "../../Functions/splitTypes";
+import type { CreateTicketInput, SplitType, TicketEventOption, TicketItem } from "../../types";
 import "./CreateListingPage.css";
 
 const restrictionNames = ["Under 16s accompanied by an adult", "Only over 18s"];
-type ListingDraft = { sectionId: string; restrictionIds: number[]; ticketType: "" | "Mobile ticket transfer" | "PDF-Ticket"; quantity: string; rowLabel: string; lowestSeat: string; purchasePrice: string; askingPrice: string; notes: string };
-const emptyDraft: ListingDraft = { sectionId: "", restrictionIds: [], ticketType: "", quantity: "1", rowLabel: "", lowestSeat: "", purchasePrice: "", askingPrice: "", notes: "" };
+type ListingDraft = { sectionId: string; restrictionIds: number[]; ticketType: "" | "Mobile ticket transfer" | "PDF-Ticket"; splitType: "" | SplitType; quantity: string; rowLabel: string; lowestSeat: string; purchasePrice: string; askingPrice: string; notes: string };
+const emptyDraft: ListingDraft = { sectionId: "", restrictionIds: [], ticketType: "", splitType: "all_together", quantity: "1", rowLabel: "", lowestSeat: "", purchasePrice: "", askingPrice: "", notes: "" };
 
 const buildDraft = (ticket: TicketItem): ListingDraft => ({
-  sectionId: String(ticket.sectionId), restrictionIds: ticket.restrictionIds ?? (ticket.restrictionId ? [ticket.restrictionId] : []), ticketType: ticket.ticketType ?? "Mobile ticket transfer", quantity: String(ticket.quantity), rowLabel: ticket.rowLabel, lowestSeat: ticket.lowestSeat ? String(ticket.lowestSeat) : "", purchasePrice: String(ticket.purchasePrice), askingPrice: String(ticket.askingPrice), notes: ticket.notes ?? "",
+  sectionId: String(ticket.sectionId), restrictionIds: ticket.restrictionIds ?? (ticket.restrictionId ? [ticket.restrictionId] : []), ticketType: ticket.ticketType ?? "Mobile ticket transfer", splitType: ticket.splitType ?? "all_together", quantity: String(ticket.quantity), rowLabel: ticket.rowLabel, lowestSeat: ticket.lowestSeat ? String(ticket.lowestSeat) : "", purchasePrice: String(ticket.purchasePrice), askingPrice: String(ticket.askingPrice), notes: ticket.notes ?? "",
 });
 
 export function CreateListingPage() {
@@ -55,6 +56,12 @@ function ListingDetailsPage({ eventId, listingId }: { eventId?: string; listingI
   const availableRestrictions = options?.restrictions.filter((restriction) => restrictionNames.includes(restriction.name)) ?? [];
   const selectedRestrictions = availableRestrictions.filter((restriction) => draft.restrictionIds.includes(restriction.id));
   const update = (key: keyof ListingDraft, value: string) => setDraft((current) => ({ ...current, [key]: value }));
+  const changeQuantity = (value: string) => setDraft((current) => {
+    const quantity = Number(value);
+    const splitOptions = availableSplitTypes(quantity);
+    const selectedStillAllowed = splitOptions.some((option) => option.value === current.splitType);
+    return { ...current, quantity: value, splitType: quantity <= 1 ? "all_together" : Number(current.quantity) <= 1 ? "" : selectedStillAllowed ? current.splitType : "" };
+  });
   const seatSummary = draft.lowestSeat && Number(draft.quantity) > 0 ? `Seats ${draft.lowestSeat}${Number(draft.quantity) > 1 ? `–${Number(draft.lowestSeat) + Number(draft.quantity) - 1}` : ""}` : "";
   const save = async (statusName: "Draft" | "Active") => {
     setError(""); if (!formRef.current?.reportValidity()) return;
@@ -63,7 +70,7 @@ function ListingDetailsPage({ eventId, listingId }: { eventId?: string; listingI
     if (!status) { setError(`${statusName} status is unavailable.`); return; }
     setSaving(statusName);
     try {
-      const payload: CreateTicketInput = { eventId: selectedEvent.id, sectionId: Number(draft.sectionId), restrictionId: draft.restrictionIds[0] ?? fallbackRestriction?.id, restrictionIds: draft.restrictionIds, ticketType: draft.ticketType as CreateTicketInput["ticketType"], marketplaceStatusId: status.id, quantity: Number(draft.quantity), rowLabel: draft.rowLabel, lowestSeat: Number(draft.lowestSeat), purchasePrice: Number(draft.purchasePrice), askingPrice: Number(draft.askingPrice), notes: draft.notes.trim() || null };
+      const payload: CreateTicketInput = { eventId: selectedEvent.id, sectionId: Number(draft.sectionId), restrictionId: draft.restrictionIds[0] ?? fallbackRestriction?.id, restrictionIds: draft.restrictionIds, ticketType: draft.ticketType as CreateTicketInput["ticketType"], splitType: (Number(draft.quantity) <= 1 ? "all_together" : draft.splitType) as SplitType, marketplaceStatusId: status.id, quantity: Number(draft.quantity), rowLabel: draft.rowLabel, lowestSeat: Number(draft.lowestSeat), purchasePrice: Number(draft.purchasePrice), askingPrice: Number(draft.askingPrice), notes: draft.notes.trim() || null };
       if (editing && sourceTicket) await updateTicket(sourceTicket.databaseId, payload); else await createTicket(payload);
       const message = statusName === "Draft" ? "Listing saved as draft." : editing ? `${sourceTicket?.ticketCode} was updated and activated.` : duplicating ? "Listing duplicated and activated." : "Listing created and activated.";
       navigate("/listings", { state: { message } });
@@ -78,7 +85,8 @@ function ListingDetailsPage({ eventId, listingId }: { eventId?: string; listingI
     <div className="field multi-select-field" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setRestrictionOpen(false); }}><span>Restrictions</span><button className="multi-select-trigger" type="button" aria-expanded={restrictionOpen} onClick={() => setRestrictionOpen((value) => !value)}><span className="multi-select-value">{selectedRestrictions.length ? selectedRestrictions.map((restriction) => <span className="restriction-chip" key={restriction.id}>{restriction.name}</span>) : <span className="restriction-placeholder">No restrictions</span>}</span><span className="multi-select-chevron" aria-hidden="true">⌄</span></button>{restrictionOpen && <div className="multi-select-menu">{availableRestrictions.map((restriction) => <label key={restriction.id}><input type="checkbox" checked={draft.restrictionIds.includes(restriction.id)} onChange={() => setDraft((current) => ({ ...current, restrictionIds: current.restrictionIds.includes(restriction.id) ? current.restrictionIds.filter((id) => id !== restriction.id) : [...current.restrictionIds, restriction.id] }))} /><span>{restriction.name}</span></label>)}</div>}</div>
     <label className="field"><span>Ticket Type</span><select value={draft.ticketType} onChange={(event) => update("ticketType", event.target.value)} required><option value="">Choose ticket type</option><option value="Mobile ticket transfer">Mobile ticket transfer</option><option value="PDF-Ticket">PDF-Ticket</option></select></label>
     <label className="field"><span>Lowest Seat</span><input type="number" min="1" value={draft.lowestSeat} onChange={(event) => update("lowestSeat", event.target.value)} required /></label>
-    <label className="field"><span>Quantity</span><input type="number" min="1" value={draft.quantity} onChange={(event) => update("quantity", event.target.value)} required /></label>
+    <label className="field"><span>Quantity</span><input type="number" min="1" value={draft.quantity} onChange={(event) => changeQuantity(event.target.value)} required /></label>
+    {Number(draft.quantity) > 1 && <label className="field split-type-field"><span>Split Type</span><select value={draft.splitType} onChange={(event) => update("splitType", event.target.value)} required><option value="">Choose how tickets may be split</option>{availableSplitTypes(Number(draft.quantity)).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select><small>{availableSplitTypes(Number(draft.quantity)).find((option) => option.value === draft.splitType)?.description ?? "This selection controls the quantities buyers can request."}</small></label>}
     <label className="field"><span>Purchase price ($)</span><input type="number" min="0" step=".01" value={draft.purchasePrice} onChange={(event) => update("purchasePrice", event.target.value)} required /></label>
     <label className="field"><span>Asking price ($)</span><input type="number" min="0" step=".01" value={draft.askingPrice} onChange={(event) => update("askingPrice", event.target.value)} required /></label>
     <label className="field listing-notes"><span>Notes</span><textarea rows={3} value={draft.notes} onChange={(event) => update("notes", event.target.value)} /></label>

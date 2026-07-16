@@ -1,8 +1,9 @@
 export type StatusTone = "positive" | "warning" | "danger" | "neutral";
 
 export const getStatusTone = (status: string): StatusTone => {
-  if (["Active", "Delivered", "Listed", "Live", "Paid", "Operational", "Synced", "Completed"].includes(status)) return "positive";
-  if (["Pending Delivery", "Processing", "Degraded", "Awaiting transfer", "Ready to send"].includes(status)) return "warning";
-  if (["Cancelled", "Error", "Down"].includes(status)) return "danger";
+  const normalized = status.trim().toLowerCase();
+  if (["active", "delivered", "listed", "live", "paid", "operational", "synced", "completed"].includes(normalized)) return "positive";
+  if (["pending delivery", "processing", "degraded", "awaiting transfer", "ready to send", "due"].includes(normalized)) return "warning";
+  if (["cancelled", "canceled", "error", "down"].includes(normalized)) return "danger";
   return "neutral";
 };

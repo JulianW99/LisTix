@@ -1,10 +1,9 @@
-.user-management { padding: 20px; }
-.user-management > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; margin-bottom: 18px; }
-.user-management h2 { margin-bottom: 4px; font-size: 1.1rem; }
-.user-management p, .user-management > header > span { margin: 0; color: #71808e; font-size: .82rem; }
-.user-management .data-table th { color: #687785; }
-.user-management .data-table td { color: #26333e; border-color: #e0e5e9; }
-.user-management .data-table tbody tr:hover { background: #f5f7f8; }
-.system-status { display: inline-flex; border-radius: 999px; padding: 4px 8px; font-size: .72rem; font-weight: 800; }
-.system-status.ok { background: #daf3ea; color: #176c55; }
-.system-status.action { background: #ffe6df; color: #a43e2b; }
+.connection-pills { display: flex; flex-wrap: wrap; gap: 5px; }
+.connection-pill { border: 1px solid #3b444e; border-radius: 999px; padding: 3px 7px; background: #252b32; color: #98a3ae; font-size: .66rem; font-weight: 750; }
+.connection-pill.connected { border-color: #397f6d; background: #1c3a32; color: #85dbc3; }
+.system-status { display: inline-flex; border-radius: 999px; padding: 4px 8px; font-size: .7rem; font-weight: 800; text-transform: capitalize; }
+.system-status.ok, .system-status.identity-verified { background: #183b31; color: #82d7b9; }
+.system-status.action, .system-status.identity-rejected { background: #422327; color: #ff9da5; }
+.system-status.identity-pending { background: #40351e; color: #f1c66f; }
+.system-status.identity-not_started { background: #2a3037; color: #aeb7c0; }
+.user-points { color: #82d7b9; }.user-points.negative { color: #ff858e; }

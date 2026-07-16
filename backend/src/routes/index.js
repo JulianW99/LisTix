@@ -4,6 +4,7 @@ import authRoutes from "./authRoutes.js";
 import supportRoutes from "./supportRoutes.js";
 import systemAdminRoutes from "./systemAdminRoutes.js";
 import teamRoutes from "./teamRoutes.js";
+import b2bMarketplaceRoutes from "./b2bMarketplaceRoutes.js";
 
 const router = Router();
 
@@ -12,6 +13,7 @@ router.get("/health", (_req, res) => {
 });
 
 router.use("/auth", authRoutes);
+router.use("/marketplace", b2bMarketplaceRoutes);
 router.use("/support", supportRoutes);
 router.use("/system-admin", systemAdminRoutes);
 router.use("/team", teamRoutes);

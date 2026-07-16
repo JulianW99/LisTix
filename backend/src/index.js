@@ -2,6 +2,8 @@ import app from "./app.js";
 import { env } from "./config/env.js";
 import { bootstrapDatabase } from "./db/bootstrap.js";
 import { pool } from "./db/pool.js";
+import { startMailboxMonitor, stopMailboxMonitor } from "./services/mailboxService.js";
+import { startDiscordInteractionBot, stopDiscordInteractionBot } from "./services/discordInteractionService.js";
 
 const start = async () => {
   try {
@@ -9,9 +11,12 @@ const start = async () => {
     await bootstrapDatabase();
 
     // 2. Then, start the HTTP server.
-    return app.listen(env.port, env.host, () => {
+    const server = app.listen(env.port, env.host, () => {
       console.log(`✅ Backend listening on port ${env.port}`);
     });
+    if (startMailboxMonitor()) console.log("Operations automation enabled.");
+    void startDiscordInteractionBot().catch((error) => console.error("Discord interactions failed to start:", error.message));
+    return server;
   } catch (error) {
     console.error("❌ Failed to start backend");
     if (error.code === 'ECONNREFUSED' && error.port === env.database.port) {
@@ -31,6 +36,8 @@ const server = await start();
 const gracefulShutdown = async (signal) => {
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
   server?.close(async () => {
+    stopMailboxMonitor();
+    stopDiscordInteractionBot();
     console.log("HTTP server closed.");
     await pool.end();
     console.log("Database pool closed.");

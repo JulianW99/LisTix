@@ -26,3 +26,4 @@
 .danger-button:hover { background: #713238; }
 .danger-button:disabled { cursor: wait; opacity: .55; }
 @media (max-width: 1050px) { .listings-table .data-table-shell { overflow-x: auto; } }
+.listing-marketplace-status { display: grid; gap: 4px; }.listing-marketplace-status small { color: #8f9aa5; white-space: nowrap; }

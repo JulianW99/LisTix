@@ -1,6 +1,7 @@
 import { env } from "../config/env.js";
 import { verifySessionToken } from "../utils/jwt.js";
 import { isTeamAccessPaused, loadUserAccess, teamAccessPausedMessage, toRequestUser, touchMembership } from "../services/accountAccessService.js";
+import { touchSystemMembership } from "../services/systemAccessService.js";
 
 export const authenticate = async (req, res, next) => {
   const token = req.cookies[env.cookieName];
@@ -23,8 +24,22 @@ export const authenticate = async (req, res, next) => {
 
     req.user = toRequestUser(access);
     void touchMembership(access.membershipId).catch(() => undefined);
+    void touchSystemMembership(access.systemMembershipId).catch(() => undefined);
     return next();
   } catch (_error) {
     return res.status(401).json({ message: "Session is invalid or expired." });
   }
+};
+
+export const optionalAuthenticate = async (req, _res, next) => {
+  const token = req.cookies[env.cookieName];
+  if (!token) return next();
+  try {
+    const tokenPayload = verifySessionToken(token);
+    const access = await loadUserAccess(tokenPayload.sub, tokenPayload.accountId);
+    if (access && !isTeamAccessPaused(access)) req.user = toRequestUser(access);
+  } catch (_error) {
+    // Public marketplace browsing remains available when an old session cookie is invalid.
+  }
+  return next();
 };

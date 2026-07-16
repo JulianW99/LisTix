@@ -8,6 +8,7 @@ export const createTicketsTableSql = `
     restriction_id INTEGER REFERENCES ticket_restrictions(id) ON DELETE RESTRICT,
     restriction_ids INTEGER[] NOT NULL DEFAULT '{}',
     ticket_type VARCHAR(80) NOT NULL DEFAULT 'Mobile ticket transfer',
+    split_type VARCHAR(40) NOT NULL DEFAULT 'all_together',
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     row_label VARCHAR(80) NOT NULL DEFAULT '',
     lowest_seat INTEGER CHECK (lowest_seat IS NULL OR lowest_seat > 0),
@@ -52,6 +53,9 @@ export const createTicketsTableSql = `
 
   ALTER TABLE tickets
     ADD COLUMN IF NOT EXISTS ticket_type VARCHAR(80) NOT NULL DEFAULT 'Mobile ticket transfer';
+
+  ALTER TABLE tickets
+    ADD COLUMN IF NOT EXISTS split_type VARCHAR(40) NOT NULL DEFAULT 'all_together';
 
   UPDATE tickets
   SET restriction_ids = ARRAY[restriction_id]

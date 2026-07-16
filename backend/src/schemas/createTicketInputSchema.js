@@ -4,6 +4,7 @@ export const createTicketInputSchema = {
   restrictionId: { type: "integer", required: false },
   restrictionIds: { type: "integerArray", required: true },
   ticketType: { type: "string", required: true },
+  splitType: { type: "string", required: false },
   marketplaceStatusId: { type: "integer", required: false },
   quantity: { type: "integer", required: true, min: 1 },
   rowLabel: { type: "string", required: true },

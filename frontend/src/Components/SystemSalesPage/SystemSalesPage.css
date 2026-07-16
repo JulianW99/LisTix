@@ -1,0 +1,5 @@
+.deadline strong, .deadline small { display: block; }
+.deadline.overdue strong, .deadline.overdue small { color: #ff858e; }
+.system-modal-wide { width: min(900px, 100%) !important; }
+.sale-points { color: #82d7b9; }.sale-points.negative { color: #ff858e; }
+.system-button.danger { border-color: #793a42; background: #422327; color: #ff9da5; }

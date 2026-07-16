@@ -33,6 +33,7 @@
 .suggestion-input input:focus { border-color: #f3ab3c; outline: 0; }
 .compact-suggestion-menu { top: calc(100% + 4px); }
 .listing-notes { grid-column: span 2; }
+.split-type-field small { color: #8e9aa5; font-size: .72rem; line-height: 1.4; }
 .listing-detail-actions { padding-top: 6px; }
 .listing-detail-actions .error-message { margin-right: auto; }
 .multi-select-field { position: relative; }

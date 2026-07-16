@@ -1,0 +1,9 @@
+.points-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.points-summary article { padding: 20px; }
+.points-summary span, .points-summary small { display: block; color: #8f9aa5; }
+.points-summary strong { display: block; margin: 8px 0; color: #edf1f5; font-size: 1.65rem; }
+.point-policy { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.point-policy span { border: 1px solid #343c45; border-radius: 8px; padding: 11px; background: #15191e; color: #aeb7c0; }
+.point-policy b { margin-right: 5px; color: #82d7b9; }.point-policy span:nth-last-child(-n+4) b, .negative { color: #ff858e !important; }
+.point-history { display: grid; }.point-history article { display: flex; justify-content: space-between; gap: 20px; padding: 13px 0; border-bottom: 1px solid #2c333b; }.point-history strong, .point-history small { display: block; }.point-history small { margin-top: 3px; color: #8f9aa5; }.point-history b { font-size: 1.1rem; }.point-history .positive { color: #82d7b9; }
+@media (max-width: 820px) { .points-summary, .point-policy { grid-template-columns: 1fr; } }

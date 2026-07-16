@@ -1,6 +1,8 @@
 import { pool } from "../db/pool.js";
 import { validateCreateTicketInput } from "../schemas/createTicketInputSchema.js";
 import { recordActivity } from "./accountAccessService.js";
+import { recordSalePoints, salePointDetails } from "./pointService.js";
+import { validateSplitType } from "./splitTypeService.js";
 
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -39,6 +41,7 @@ const ticketSelectSql = `
       ORDER BY restriction.name
     ) AS restriction_names,
     t.ticket_type,
+    t.split_type,
     COALESCE((
       SELECT jsonb_agg(
         jsonb_build_object(
@@ -58,6 +61,16 @@ const ticketSelectSql = `
       FROM buyer_channels bc
       WHERE bc.name <> 'Manual Buyer'
     ), '[]'::jsonb) AS marketplace_prices,
+    COALESCE((
+      SELECT jsonb_agg(jsonb_build_object(
+        'marketplace', publication.marketplace,
+        'status', publication.status,
+        'enabled', COALESCE(control.enabled, TRUE)
+      ) ORDER BY publication.marketplace)
+      FROM listing_marketplace_publications publication
+      LEFT JOIN marketplace_controls control ON control.marketplace = publication.marketplace
+      WHERE publication.ticket_id = t.id
+    ), '[]'::jsonb) AS marketplace_availability,
     t.marketplace_status_id,
     ms.name AS marketplace_status_name,
     t.quantity,
@@ -103,7 +116,9 @@ const mapTicketRow = (row) => ({
   restrictionIds: (row.restriction_ids ?? []).map(Number),
   restrictions: row.restriction_names ?? [],
   ticketType: row.ticket_type,
+  splitType: row.split_type,
   marketplacePrices: row.marketplace_prices ?? [],
+  marketplaceAvailability: row.marketplace_availability ?? [],
   marketplaceStatusId: Number(row.marketplace_status_id),
   marketplaceStatus: row.marketplace_status_name,
   quantity: Number(row.quantity),
@@ -152,10 +167,13 @@ const soldOrderSelectSql = `
     ds.name AS dispatch_status_name,
     ds.is_terminal,
     so.sold_at,
+    so.delivery_deadline,
     so.payout_amount,
     so.customer_name,
     so.buyer_email,
     so.sent_at,
+    upt.points AS point_value,
+    upt.reason AS point_reason,
     sender.display_name AS sent_by_name,
     sender.email AS sent_by_email,
     so.created_at,
@@ -168,6 +186,7 @@ const soldOrderSelectSql = `
   INNER JOIN buyer_channels bc ON bc.id = so.buyer_channel_id
   INNER JOIN dispatch_statuses ds ON ds.id = so.dispatch_status_id
   LEFT JOIN users sender ON sender.id = so.sent_by_user_id
+  LEFT JOIN user_point_transactions upt ON upt.sold_order_id = so.id
 `;
 
 export const mapSoldOrderRow = (row) => ({
@@ -195,6 +214,7 @@ export const mapSoldOrderRow = (row) => ({
   dispatchStatus: row.dispatch_status_name,
   dispatchComplete: Boolean(row.is_terminal),
   soldAt: row.sold_at,
+  deliveryDeadline: row.delivery_deadline,
   payoutAt: row.sold_at,
   payoutAmount: toNumber(row.payout_amount),
   profit: toNumber(row.payout_amount) - toNumber(row.purchase_price) * Number(row.quantity),
@@ -209,6 +229,13 @@ export const mapSoldOrderRow = (row) => ({
   sentBy: row.sent_by_name || null,
   sentByEmail: row.sent_by_email || null,
   sentAt: row.sent_at,
+  ...salePointDetails({
+    deliveryDeadline: row.delivery_deadline,
+    sentAt: row.sent_at,
+    pointValue: row.point_value,
+    pointReason: row.point_reason,
+    dispatchStatus: row.dispatch_status_name,
+  }),
   ticketType: row.ticket_type,
   restrictions: row.restriction_names ?? [],
   createdAt: row.created_at,
@@ -218,7 +245,7 @@ export const mapSoldOrderRow = (row) => ({
 export const listTickets = async (user) => {
   const result = await pool.query(`
     ${ticketSelectSql}
-    WHERE t.account_id = $1
+    WHERE t.account_id = $1 AND ms.name <> 'Deleted'
     ORDER BY e.event_date ASC, t.ticket_code ASC
   `, [user.accountId]);
 
@@ -232,7 +259,7 @@ export const getTicketByIdentifier = async (identifier, user) => {
     ? await pool.query(
         `
           ${ticketSelectSql}
-          WHERE (t.id = $1 OR t.ticket_code = $2) AND t.account_id = $3
+          WHERE (t.id = $1 OR t.ticket_code = $2) AND t.account_id = $3 AND ms.name <> 'Deleted'
           LIMIT 1
         `,
         [Number(textIdentifier), textIdentifier, user.accountId],
@@ -240,7 +267,7 @@ export const getTicketByIdentifier = async (identifier, user) => {
     : await pool.query(
         `
           ${ticketSelectSql}
-          WHERE t.ticket_code = $1 AND t.account_id = $2
+          WHERE t.ticket_code = $1 AND t.account_id = $2 AND ms.name <> 'Deleted'
           LIMIT 1
         `,
         [textIdentifier, user.accountId],
@@ -255,18 +282,20 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
   const result = isNumericIdentifier
     ? await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
+          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
           FROM tickets
           WHERE (id = $1 OR ticket_code = $2) AND account_id = $3
+            AND marketplace_status_id <> (SELECT id FROM marketplace_statuses WHERE name = 'Deleted' LIMIT 1)
           LIMIT 1
         `,
         [Number(textIdentifier), textIdentifier, user.accountId],
       )
     : await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type
+          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
           FROM tickets
           WHERE ticket_code = $1 AND account_id = $2
+            AND marketplace_status_id <> (SELECT id FROM marketplace_statuses WHERE name = 'Deleted' LIMIT 1)
           LIMIT 1
         `,
         [textIdentifier, user.accountId],
@@ -399,6 +428,8 @@ export const createTicket = async (payload, user) => {
       validation.value.marketplaceStatusId ?? await getMarketplaceStatusId(client, "Active");
     const restrictionIds = validation.value.restrictionIds ?? [];
     const restrictionId = validation.value.restrictionId ?? restrictionIds[0] ?? null;
+    const splitValidation = validateSplitType(validation.value.quantity, validation.value.splitType);
+    if (!splitValidation.ok) { const error = new Error(splitValidation.message); error.statusCode = 400; throw error; }
 
     if (!restrictionId) {
       const noRestriction = await client.query("SELECT id FROM ticket_restrictions WHERE name = 'No restrictions' LIMIT 1");
@@ -425,6 +456,7 @@ export const createTicket = async (payload, user) => {
           restriction_id,
           restriction_ids,
           ticket_type,
+          split_type,
           quantity,
           row_label,
           lowest_seat,
@@ -437,7 +469,7 @@ export const createTicket = async (payload, user) => {
           last_edited_by_user_id,
           last_edited_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $16, NOW())
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $17, NOW())
         RETURNING id
       `,
       [
@@ -448,6 +480,7 @@ export const createTicket = async (payload, user) => {
         validation.value.restrictionId ?? restrictionId,
         restrictionIds,
         validation.value.ticketType,
+        splitValidation.value,
         validation.value.quantity,
         validation.value.rowLabel,
         validation.value.lowestSeat,
@@ -496,6 +529,7 @@ export const updateTicket = async (identifier, payload, user) => {
     ["restrictionId", "restriction_id"],
     ["restrictionIds", "restriction_ids"],
     ["ticketType", "ticket_type"],
+    ["splitType", "split_type"],
     ["marketplaceStatusId", "marketplace_status_id"],
     ["quantity", "quantity"],
     ["rowLabel", "row_label"],
@@ -530,6 +564,14 @@ export const updateTicket = async (identifier, payload, user) => {
       validation.value.marketplaceStatusId ?? Number(existingTicket.marketplace_status_id);
     const nextRestrictionId =
       validation.value.restrictionId ?? Number(existingTicket.restriction_id);
+    const nextQuantity = validation.value.quantity ?? Number(existingTicket.quantity);
+    const nextSplitType = validation.value.splitType ?? existingTicket.split_type;
+    const splitValidation = validateSplitType(nextQuantity, nextSplitType);
+    if (!splitValidation.ok) { const error = new Error(splitValidation.message); error.statusCode = 400; throw error; }
+    if (validation.value.quantity !== undefined && validation.value.splitType === undefined && splitValidation.value !== existingTicket.split_type) {
+      validation.value.splitType = splitValidation.value;
+      fields.push(["splitType", "split_type"]);
+    }
 
     if (validation.value.restrictionIds !== undefined) {
       await assertRestrictionIds(client, validation.value.restrictionIds);
@@ -600,7 +642,9 @@ export const deleteTicket = async (identifier, user) => {
       return false;
     }
 
-    await client.query("DELETE FROM tickets WHERE id = $1", [existingTicket.id]);
+    const deletedStatus = await getMarketplaceStatusId(client, "Deleted");
+    await client.query("UPDATE tickets SET marketplace_status_id = $1, updated_at = NOW(), last_edited_by_user_id = $2, last_edited_at = NOW() WHERE id = $3", [deletedStatus, user.sub, existingTicket.id]);
+    await client.query("UPDATE listing_marketplace_publications SET status = 'paused', updated_at = NOW() WHERE ticket_id = $1", [existingTicket.id]);
     await recordActivity(client, {
       accountId: user.accountId,
       actorUserId: user.sub,
@@ -661,38 +705,49 @@ export const updateSoldOrder = async (identifier, payload, user) => {
     return null;
   }
 
-  const result = await pool.query(`
-    UPDATE sold_orders AS so
-    SET dispatch_status_id = $1,
-        sent_by_user_id = CASE WHEN ds.is_terminal THEN $4 ELSE so.sent_by_user_id END,
-        sent_at = CASE WHEN ds.is_terminal THEN NOW() ELSE so.sent_at END,
-        updated_at = NOW()
-    FROM dispatch_statuses AS ds, tickets AS t
-    WHERE so.id = $2
-      AND ds.id = $1
-      AND so.ticket_id = t.id
-      AND t.account_id = $3
-    RETURNING so.id
-  `, [dispatchStatusId, existingOrder.databaseId, user.accountId, user.sub]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const result = await client.query(`
+      UPDATE sold_orders AS so
+      SET dispatch_status_id = $1,
+          sent_by_user_id = CASE WHEN ds.is_terminal THEN COALESCE(so.sent_by_user_id, $4) ELSE so.sent_by_user_id END,
+          sent_at = CASE WHEN ds.is_terminal THEN COALESCE(so.sent_at, NOW()) ELSE so.sent_at END,
+          updated_at = NOW()
+      FROM dispatch_statuses AS ds, tickets AS t
+      WHERE so.id = $2
+        AND ds.id = $1
+        AND ds.name <> 'Canceled'
+        AND so.ticket_id = t.id
+        AND t.account_id = $3
+      RETURNING so.id, ds.is_terminal
+    `, [dispatchStatusId, existingOrder.databaseId, user.accountId, user.sub]);
 
-  if (result.rowCount === 0) {
-    const error = new Error("Selected dispatch status does not exist.");
-    error.statusCode = 400;
+    if (result.rowCount === 0) {
+      const error = new Error("Selected dispatch status does not exist or cannot be selected by a user.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (result.rows[0].is_terminal) {
+      await recordSalePoints(client, existingOrder.databaseId);
+      await recordActivity(client, {
+        accountId: user.accountId,
+        actorUserId: user.sub,
+        action: "sale.sent",
+        entityType: "sale",
+        entityId: existingOrder.databaseId,
+        metadata: { orderCode: existingOrder.orderCode },
+      });
+    }
+    await client.query("COMMIT");
+    return getSoldOrderByIdentifier(existingOrder.databaseId, user);
+  } catch (error) {
+    await client.query("ROLLBACK");
     throw error;
+  } finally {
+    client.release();
   }
-
-  const updatedOrder = await getSoldOrderByIdentifier(result.rows[0].id, user);
-  if (updatedOrder?.dispatchComplete) {
-    await recordActivity(pool, {
-      accountId: user.accountId,
-      actorUserId: user.sub,
-      action: "sale.sent",
-      entityType: "sale",
-      entityId: updatedOrder.databaseId,
-      metadata: { orderCode: updatedOrder.orderCode },
-    });
-  }
-  return updatedOrder;
 };
 
 export const getTicketInputOptions = async () => {

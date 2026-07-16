@@ -80,7 +80,7 @@ const events = [
     eventName: "Champions League Final Screening",
     venueName: "O2 Arena",
     categoryName: "Sports",
-    eventDate: "2026-06-30T20:00:00+01:00",
+    eventDate: "2026-11-14T20:00:00+00:00",
   },
   {
     eventName: "Ed Sheeran - London",
@@ -153,6 +153,17 @@ const seatSections = [
     seatLabel: "4-5",
     capacity: 140,
   },
+  { venueName: "Olympiastadion Berlin", name: "Block B2", rowLabel: "18", seatLabel: "31-36", capacity: 150 },
+  { venueName: "Ziggo Dome", name: "Section 102", rowLabel: "6", seatLabel: "11-16", capacity: 155 },
+  { venueName: "Ziggo Dome", name: "Upper 204", rowLabel: "9", seatLabel: "20-25", capacity: 180 },
+  { venueName: "Olympiapark", name: "Block L2", rowLabel: "11", seatLabel: "6-10", capacity: 125 },
+  { venueName: "Olympiapark", name: "Block 217", rowLabel: "7", seatLabel: "18-23", capacity: 165 },
+  { venueName: "O2 Arena", name: "Lower 112", rowLabel: "9", seatLabel: "13-18", capacity: 145 },
+  { venueName: "O2 Arena", name: "Upper 205", rowLabel: "16", seatLabel: "30-35", capacity: 190 },
+  { venueName: "Wembley Stadium", name: "Block 121", rowLabel: "22", seatLabel: "41-46", capacity: 175 },
+  { venueName: "Wembley Stadium", name: "Floor B", rowLabel: "GA", seatLabel: "Standing", capacity: 400 },
+  { venueName: "Madison Square Garden", name: "Section 102", rowLabel: "12", seatLabel: "7-11", capacity: 145 },
+  { venueName: "Madison Square Garden", name: "Section 210", rowLabel: "5", seatLabel: "14-19", capacity: 170 },
 ];
 
 const marketplaceStatuses = [
@@ -179,6 +190,10 @@ const marketplaceStatuses = [
   {
     name: "Archived",
     description: "Ticket is no longer part of active operations.",
+  },
+  {
+    name: "Deleted",
+    description: "Ticket was deleted by its owner and remains visible only to system administrators.",
   },
 ];
 
@@ -248,9 +263,10 @@ const tickets = [
     ownerEmail: env.adminUser.email,
     eventName: "Taylor Swift - Berlin",
     sectionName: "Block 112",
-    marketplaceStatusName: "Draft",
+    marketplaceStatusName: "Active",
     restrictionName: "Mobile transfer only",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "12",
     lowestSeat: 1,
     purchasePrice: 189.5,
@@ -265,6 +281,7 @@ const tickets = [
     marketplaceStatusName: "Listed",
     restrictionName: "No restrictions",
     quantity: 4,
+    splitType: "pairs",
     rowLabel: "GA",
     lowestSeat: 1,
     purchasePrice: 122,
@@ -276,9 +293,10 @@ const tickets = [
     ownerEmail: jamieDemoUser.email,
     eventName: "Coldplay - Munich",
     sectionName: "Block L1",
-    marketplaceStatusName: "Needs pricing",
+    marketplaceStatusName: "Listed",
     restrictionName: "Restricted view",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "8",
     lowestSeat: 10,
     purchasePrice: 149,
@@ -291,8 +309,9 @@ const tickets = [
     eventName: "Champions League Final Screening",
     sectionName: "Lower 101",
     marketplaceStatusName: "Listed",
-    restrictionName: "Under 18 accompanied",
+    restrictionName: "Under 16s accompanied by an adult",
     quantity: 4,
+    splitType: "any_no_single",
     rowLabel: "14",
     lowestSeat: 7,
     purchasePrice: 64,
@@ -307,6 +326,7 @@ const tickets = [
     marketplaceStatusName: "Listed",
     restrictionName: "No restrictions",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "10",
     lowestSeat: 21,
     purchasePrice: 110,
@@ -318,9 +338,10 @@ const tickets = [
     ownerEmail: alexDemoUser.email,
     eventName: "Billie Eilish - New York",
     sectionName: "Section 101",
-    marketplaceStatusName: "Draft",
+    marketplaceStatusName: "Listed",
     restrictionName: "Mobile transfer only",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "15",
     lowestSeat: 5,
     purchasePrice: 250,
@@ -335,6 +356,7 @@ const tickets = [
     marketplaceStatusName: "Sold",
     restrictionName: "No restrictions",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "3",
     lowestSeat: 4,
     purchasePrice: 150,
@@ -349,6 +371,7 @@ const tickets = [
     marketplaceStatusName: "Listed",
     restrictionName: "No restrictions",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "10",
     lowestSeat: 23,
     purchasePrice: 118,
@@ -363,6 +386,7 @@ const tickets = [
     marketplaceStatusName: "Sold",
     restrictionName: "Mobile transfer only",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "15",
     lowestSeat: 7,
     purchasePrice: 240,
@@ -377,6 +401,7 @@ const tickets = [
     marketplaceStatusName: "Needs pricing",
     restrictionName: "No restrictions",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "GA",
     lowestSeat: 1,
     purchasePrice: 130,
@@ -388,14 +413,48 @@ const tickets = [
     ownerEmail: jamieDemoUser.email,
     eventName: "Coldplay - Munich",
     sectionName: "Block L1",
-    marketplaceStatusName: "Draft",
+    marketplaceStatusName: "Deleted",
     restrictionName: "Restricted view",
     quantity: 2,
+    splitType: "all_together",
     rowLabel: "8",
     lowestSeat: 12,
     purchasePrice: 145,
     askingPrice: 205,
     notes: "Draft listing prepared for next pricing pass.",
+  },
+  {
+    ticketCode: "TCK-1012", ownerEmail: env.adminUser.email, eventName: "Drake - Amsterdam", sectionName: "Section 102", marketplaceStatusName: "Listed", restrictionName: "No restrictions", quantity: 2, splitType: "all_together", rowLabel: "6", lowestSeat: 11, purchasePrice: 138, askingPrice: 205, notes: "Lower section pair near the stage.",
+  },
+  {
+    ticketCode: "TCK-1013", ownerEmail: jamieDemoUser.email, eventName: "Drake - Amsterdam", sectionName: "Upper 204", marketplaceStatusName: "Active", restrictionName: "Mobile transfer only", quantity: 6, splitType: "pairs", rowLabel: "9", lowestSeat: 20, purchasePrice: 94, askingPrice: 154, notes: "Six adjacent seats available in pairs.",
+  },
+  {
+    ticketCode: "TCK-1014", ownerEmail: taylorDemoUser.email, eventName: "Coldplay - Munich", sectionName: "Block L2", marketplaceStatusName: "Listed", restrictionName: "No restrictions", quantity: 3, splitType: "any_no_single", rowLabel: "11", lowestSeat: 6, purchasePrice: 128, askingPrice: 189, notes: "Flexible group with no single ticket left behind.",
+  },
+  {
+    ticketCode: "TCK-1015", ownerEmail: alexDemoUser.email, eventName: "Coldplay - Munich", sectionName: "Block 217", marketplaceStatusName: "Active", restrictionName: "No restrictions", quantity: 4, splitType: "any", rowLabel: "7", lowestSeat: 18, purchasePrice: 104, askingPrice: 168, notes: "Any quantity can be purchased.",
+  },
+  {
+    ticketCode: "TCK-1016", ownerEmail: alexDemoUser.email, eventName: "Ed Sheeran - London", sectionName: "Block 121", marketplaceStatusName: "Listed", restrictionName: "Mobile transfer only", quantity: 4, splitType: "pairs", rowLabel: "22", lowestSeat: 41, purchasePrice: 142, askingPrice: 219, notes: "Four adjacent lower-tier seats sold in pairs.",
+  },
+  {
+    ticketCode: "TCK-1017", ownerEmail: jamieDemoUser.email, eventName: "Ed Sheeran - London", sectionName: "Floor B", marketplaceStatusName: "Active", restrictionName: "No restrictions", quantity: 3, splitType: "single_or_all", rowLabel: "GA", lowestSeat: 1, purchasePrice: 165, askingPrice: 245, notes: "Standing tickets, one or all three.",
+  },
+  {
+    ticketCode: "TCK-1018", ownerEmail: taylorDemoUser.email, eventName: "Billie Eilish - New York", sectionName: "Section 102", marketplaceStatusName: "Active", restrictionName: "Mobile transfer only", quantity: 2, splitType: "all_together", rowLabel: "12", lowestSeat: 7, purchasePrice: 225, askingPrice: 349, notes: "Adjacent lower-bowl pair.",
+  },
+  {
+    ticketCode: "TCK-1019", ownerEmail: env.adminUser.email, eventName: "Billie Eilish - New York", sectionName: "Section 210", marketplaceStatusName: "Listed", restrictionName: "No restrictions", quantity: 5, splitType: "any_no_single", rowLabel: "5", lowestSeat: 14, purchasePrice: 176, askingPrice: 269, notes: "Flexible five-ticket group.",
+  },
+  {
+    ticketCode: "TCK-1020", ownerEmail: alexDemoUser.email, eventName: "Taylor Swift - Berlin", sectionName: "Block B2", marketplaceStatusName: "Active", restrictionName: "Mobile transfer only", quantity: 4, splitType: "pairs", rowLabel: "18", lowestSeat: 31, purchasePrice: 210, askingPrice: 318, notes: "Four adjacent seats sold in pairs.",
+  },
+  {
+    ticketCode: "TCK-1021", ownerEmail: jamieDemoUser.email, eventName: "Champions League Final Screening", sectionName: "Lower 112", marketplaceStatusName: "Listed", restrictionName: "No restrictions", quantity: 2, splitType: "all_together", rowLabel: "9", lowestSeat: 13, purchasePrice: 72, askingPrice: 119, notes: "Central lower-tier pair.",
+  },
+  {
+    ticketCode: "TCK-1022", ownerEmail: taylorDemoUser.email, eventName: "Champions League Final Screening", sectionName: "Upper 205", marketplaceStatusName: "Active", restrictionName: "No restrictions", quantity: 6, splitType: "pairs", rowLabel: "16", lowestSeat: 30, purchasePrice: 48, askingPrice: 86, notes: "Six adjacent seats available in pairs.",
   },
 ];
 
@@ -689,6 +748,7 @@ export const seedDemoData = async (client, { includeOperations = true } = {}) =>
             restriction_id,
             restriction_ids,
             ticket_type,
+            split_type,
             quantity,
             row_label,
             lowest_seat,
@@ -701,7 +761,7 @@ export const seedDemoData = async (client, { includeOperations = true } = {}) =>
             last_edited_by_user_id,
             last_edited_at
           )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $14, $14, NOW())
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $15, $15, NOW())
           ON CONFLICT (ticket_code) DO UPDATE SET
             event_id = EXCLUDED.event_id,
             section_id = EXCLUDED.section_id,
@@ -709,6 +769,7 @@ export const seedDemoData = async (client, { includeOperations = true } = {}) =>
             restriction_id = EXCLUDED.restriction_id,
             restriction_ids = EXCLUDED.restriction_ids,
             ticket_type = EXCLUDED.ticket_type,
+            split_type = EXCLUDED.split_type,
             quantity = EXCLUDED.quantity,
             row_label = EXCLUDED.row_label,
             lowest_seat = EXCLUDED.lowest_seat,
@@ -728,6 +789,7 @@ export const seedDemoData = async (client, { includeOperations = true } = {}) =>
           restrictionIds[ticket.restrictionName],
           [restrictionIds[ticket.restrictionName]],
           ticket.restrictionName === "Mobile transfer only" ? "Mobile ticket transfer" : "PDF-Ticket",
+          ticket.splitType || "all_together",
           ticket.quantity,
           ticket.rowLabel,
           ticket.lowestSeat,

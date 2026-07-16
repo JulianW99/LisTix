@@ -51,6 +51,7 @@ const beginDiscordAuthorization = (req, res, next) => {
       nonce,
       sub: req.user.sub,
       accountId: req.user.accountId,
+      returnPath: req.user.role === "buyer" ? "/marketplace" : "/settings",
     });
     res.cookie(stateCookieName, nonce, stateCookieOptions());
     return res.json({ authorizationUrl: buildDiscordAuthorizationUrl(state) });
@@ -62,8 +63,10 @@ const beginDiscordAuthorization = (req, res, next) => {
 export const startDiscordConnect = (req, res, next) => beginDiscordAuthorization(req, res, next);
 
 export const discordCallback = async (req, res) => {
+  let returnPath = "/settings";
   try {
     const state = verifyDiscordState(String(req.query.state || ""));
+    returnPath = state.returnPath === "/marketplace" ? "/marketplace" : "/settings";
     if (state.intent !== "connect" || !state.sub) {
       throw new Error("Discord must be connected from Settings while signed in to LisTix.");
     }
@@ -94,13 +97,13 @@ export const discordCallback = async (req, res) => {
       scopes,
     });
     setSessionCookie(res, access);
-    return res.redirect(buildFrontendUrl("/settings", { discord: "connected" }, "settings-connections"));
+    return res.redirect(buildFrontendUrl(returnPath, { discord: "connected" }, returnPath === "/settings" ? "settings-connections" : ""));
   } catch (error) {
     res.clearCookie(stateCookieName, stateCookieBaseOptions());
     const message = error instanceof Error ? error.message : "Discord authorization failed.";
-    return res.redirect(buildFrontendUrl("/settings", {
+    return res.redirect(buildFrontendUrl(returnPath, {
       discord_error: message,
-    }, "settings-connections"));
+    }, returnPath === "/settings" ? "settings-connections" : ""));
   }
 };
 

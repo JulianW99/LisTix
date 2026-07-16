@@ -4,5 +4,5 @@
 @media (max-width: 820px) {
   .app-layout { display: block; height: auto; min-height: 100dvh; overflow: visible; }
   .app-workspace { display: block; }
-  .main-frame { overflow: visible; padding: 14px; }
+  .main-frame { overflow: visible; padding: 14px 12px 90px; }
 }
