@@ -1,4 +1,6 @@
-export const errorHandler = (error, _req, res, _next) => {
+import { notifySystemAdmins } from "../services/systemAdminNotificationService.js";
+
+export const errorHandler = (error, req, res, _next) => {
   console.error(error);
 
   if (error.code === "23505") {
@@ -12,6 +14,20 @@ export const errorHandler = (error, _req, res, _next) => {
   const statusCode = error.statusCode || 500;
   const message = error.message || "Internal server error";
   const body = { message };
+
+  if (statusCode >= 500) {
+    void notifySystemAdmins({
+      eventType: "page_error",
+      title: "LisTix application error",
+      message: "An API request ended with an unexpected server error.",
+      details: {
+        method: req.method,
+        path: req.originalUrl,
+        error: message,
+        userId: req.user?.sub ?? "anonymous",
+      },
+    }).catch((notificationError) => console.error("System error notification failed:", notificationError.message));
+  }
 
   if (error.details) {
     body.details = error.details;

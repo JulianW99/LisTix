@@ -37,6 +37,16 @@ export const createPlatformAdministrationTablesSql = `
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   );
 
+  CREATE TABLE IF NOT EXISTS system_admin_notification_preferences (
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_type VARCHAR(80) NOT NULL,
+    email_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    discord_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    pushover_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, event_type)
+  );
+
   CREATE TABLE IF NOT EXISTS marketplace_publication_snapshots (
     publication_id INTEGER PRIMARY KEY REFERENCES listing_marketplace_publications(id) ON DELETE CASCADE,
     marketplace VARCHAR(120) NOT NULL,
@@ -56,4 +66,12 @@ export const createPlatformAdministrationTablesSql = `
     ON system_admin_members(status, role);
   CREATE INDEX IF NOT EXISTS marketplace_publication_snapshots_marketplace_idx
     ON marketplace_publication_snapshots(marketplace);
+  CREATE INDEX IF NOT EXISTS system_admin_notification_preferences_event_idx
+    ON system_admin_notification_preferences(event_type);
+
+  UPDATE system_admin_members
+  SET permissions = permissions || '["system.notifications.view", "system.notifications.manage"]'::jsonb,
+      updated_at = NOW()
+  WHERE role = 'administrator'
+    AND NOT permissions @> '["system.notifications.view", "system.notifications.manage"]'::jsonb;
 `;

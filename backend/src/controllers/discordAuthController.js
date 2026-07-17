@@ -51,7 +51,7 @@ const beginDiscordAuthorization = (req, res, next) => {
       nonce,
       sub: req.user.sub,
       accountId: req.user.accountId,
-      returnPath: req.user.role === "buyer" ? "/marketplace" : "/settings",
+      returnPath: req.user.systemAccess ? "/system/settings" : req.user.role === "buyer" ? "/marketplace" : "/settings",
     });
     res.cookie(stateCookieName, nonce, stateCookieOptions());
     return res.json({ authorizationUrl: buildDiscordAuthorizationUrl(state) });
@@ -66,7 +66,7 @@ export const discordCallback = async (req, res) => {
   let returnPath = "/settings";
   try {
     const state = verifyDiscordState(String(req.query.state || ""));
-    returnPath = state.returnPath === "/marketplace" ? "/marketplace" : "/settings";
+    returnPath = ["/marketplace", "/system/settings"].includes(state.returnPath) ? state.returnPath : "/settings";
     if (state.intent !== "connect" || !state.sub) {
       throw new Error("Discord must be connected from Settings while signed in to LisTix.");
     }

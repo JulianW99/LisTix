@@ -11,7 +11,7 @@ const navigation = [
   { to: "/system/actions", label: "Actions", icon: "actions", permission: "system.actions.view" },
   { to: "/system/support", label: "Support", icon: "support", permission: "system.support.view" },
   { to: "/system/maps", label: "Venue Maps", icon: "maps", permission: "system.maps.view" },
-  { to: "/system/settings", label: "Settings", icon: "settings", permission: "system.marketplaces.view" },
+  { to: "/system/settings", label: "Settings", icon: "settings", permission: "system.notifications.view" },
 ];
 
 const titles: Record<string, { eyebrow: string; title: string }> = {
@@ -47,7 +47,9 @@ export function SystemAdminLayout({ user, onLogout }: { user: User; onLogout: ()
     <aside className="system-sidebar">
       <div className="system-brand"><span><img src="/branding/listix-icon.png" alt="" /></span><div><strong>LisTix Control</strong><small>System administration</small></div></div>
       <span className="system-nav-label">Platform</span>
-      <nav aria-label="System administration">{navigation.filter((item) => hasPermission(user, item.permission)).map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "active" : ""}><NavIcon name={item.icon} /><span>{item.label}</span></NavLink>)}</nav>
+      <nav aria-label="System administration">{navigation.filter((item) => item.to === "/system/settings"
+        ? hasPermission(user, "system.marketplaces.view") || hasPermission(user, "system.team.view") || hasPermission(user, "system.notifications.view")
+        : hasPermission(user, item.permission)).map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "active" : ""}><NavIcon name={item.icon} /><span>{item.label}</span></NavLink>)}</nav>
       <div className="system-account"><span className="system-avatar">{user.displayName.charAt(0).toUpperCase()}</span><div><strong>{user.displayName}</strong><small>{user.email}</small></div><button type="button" onClick={() => void onLogout()} aria-label="Sign out">↗</button></div>
     </aside>
     <div className="system-workspace">

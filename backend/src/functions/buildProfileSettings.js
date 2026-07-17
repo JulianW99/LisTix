@@ -1,3 +1,5 @@
+import { buildNotificationPreferences } from "./buildNotificationPreferences.js";
+
 const defaults = {
   discordHandle: "", discordUserId: "", addressLine1: "", addressLine2: "",
   postalCode: "", city: "", country: "", payoutMethod: "Bank transfer",
@@ -10,6 +12,12 @@ const defaults = {
   ticketmasterAccountsCsv: "", axsAccountsCsv: "",
 };
 
-export const buildProfileSettings = (input = {}) => Object.fromEntries(
-  Object.entries(defaults).map(([key, fallback]) => [key, input[key] ?? fallback]),
-);
+export const buildProfileSettings = (input = {}) => {
+  const settings = Object.fromEntries(
+    Object.entries(defaults).map(([key, fallback]) => [key, input[key] ?? fallback]),
+  );
+  settings.notificationPreferences = buildNotificationPreferences(input.notificationPreferences, {
+    hasPushoverKey: Boolean(String(settings.pushoverUserKey).trim()),
+  });
+  return settings;
+};

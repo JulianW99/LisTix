@@ -21,6 +21,7 @@ export function Sidebar({ user }: { user: User }) {
     { id: "settings-payment", label: "Payment" },
     { id: "settings-payout", label: "Payout" },
     { id: "settings-connections", label: "Connections" },
+    { id: "settings-notifications", label: "Notifications" },
     ...(hasPermission(user, "team.view") ? [{ id: "settings-team", label: "Team & Access" }] : []),
     ...(hasPermission(user, "audit.view") ? [{ id: "settings-activity", label: "Activity Log" }] : []),
   ];

@@ -26,12 +26,15 @@ import { env } from "../config/env.js";
 import { listMarketplaceControls, setAllMarketplacesEnabled, setMarketplaceEnabled } from "../services/marketplaceControlService.js";
 import { deleteSystemMember, getSystemTeam, inviteSystemMember, updateSystemMember } from "../services/systemAccessService.js";
 import { listVenueMaps, previewVenueMap, saveVenueMap } from "../services/venueMapService.js";
+import { ingestMarketplaceSale } from "../services/saleIntakeService.js";
+import { getSystemAdminNotificationSettings, updateSystemAdminNotificationSettings } from "../services/systemAdminNotificationService.js";
 
 const filters = (query) => ({ scope: query.scope, from: query.from, to: query.to });
 export const getUsers = async (_req, res, next) => { try { return res.json({ items: await listPlatformUsers() }); } catch (error) { return next(error); } };
 export const getUser = async (req, res, next) => { try { const item = await getPlatformUserDetails(req.params.id); return item ? res.json({ item }) : res.status(404).json({ message: "User not found." }); } catch (error) { return next(error); } };
 export const putUser = async (req, res, next) => { try { const item = await updatePlatformUser(req.params.id, req.body); return item ? res.json({ item }) : res.status(404).json({ message: "User not found." }); } catch (error) { return next(error); } };
 export const getSales = async (_req, res, next) => { try { return res.json({ items: await listPlatformSales() }); } catch (error) { return next(error); } };
+export const postSaleIntake = async (req, res, next) => { try { const result = await ingestMarketplaceSale(req.body); return res.status(result.created ? 201 : 200).json(result); } catch (error) { return next(error); } };
 export const getSale = async (req, res, next) => { try { const item = await getPlatformSale(req.params.id); return item ? res.json({ item }) : res.status(404).json({ message: "Sale not found." }); } catch (error) { return next(error); } };
 export const cancelSale = async (req, res, next) => { try { return res.json({ item: await cancelPlatformSale(req.params.id, req.user.sub) }); } catch (error) { return next(error); } };
 export const getListings = async (_req, res, next) => { try { return res.json({ items: await listPlatformListings() }); } catch (error) { return next(error); } };
@@ -47,7 +50,10 @@ export const getAutomationStatus = async (_req, res) => res.json({
   imap: mailboxConfigured(),
   smtp: Boolean(env.smtp.host && env.smtp.fromAddress),
   discord: Boolean(env.discord.botToken && env.discord.guildId),
+  pushover: Boolean(env.pushover.applicationToken),
 });
+export const getNotificationSettings = async (_req, res, next) => { try { return res.json(await getSystemAdminNotificationSettings()); } catch (error) { return next(error); } };
+export const putNotificationSettings = async (req, res, next) => { try { return res.json(await updateSystemAdminNotificationSettings(req.body)); } catch (error) { return next(error); } };
 export const getTickets = async (req, res, next) => { try { return res.json({ items: await listSystemSupportTickets(filters(req.query)) }); } catch (error) { return next(error); } };
 export const getTicket = async (req, res, next) => { try { const item = await getSupportTicket(req.params.id, { allowAll: true }); return item ? res.json({ item }) : res.status(404).json({ message: "Support ticket not found." }); } catch (error) { return next(error); } };
 export const replyToTicket = async (req, res, next) => { try { const item = await addSupportMessage(req.params.id, req.body.text, req.user.sub, { allowAll: true }); return item ? res.status(200).json({ item }) : res.status(404).json({ message: "Support ticket not found." }); } catch (error) { return next(error); } };

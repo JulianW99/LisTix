@@ -1,9 +1,9 @@
 import { Router } from "express";
 import {
   cancelSale, changeTicketStatus, getActions, getAutomationStatus, getDashboard, getListings, getMarketplaces, getPayments,
-  getSale, getSales, getTeam, getTicket, getTickets, getTopics, getUser, getUsers, inviteTeamMember, patchTeamMember, pollMailbox, postTestAction,
+  getNotificationSettings, getSale, getSales, getTeam, getTicket, getTickets, getTopics, getUser, getUsers, inviteTeamMember, patchTeamMember, pollMailbox, postSaleIntake, postTestAction,
   postTopic, putAllMarketplaces, putMarketplace, putUser, removeTeamMember, removeTopic, replyToTicket, resolveAction,
-  getVenueMaps, getVenueMapPreview, putVenueMap,
+  getVenueMaps, getVenueMapPreview, putNotificationSettings, putVenueMap,
 } from "../controllers/systemAdminController.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { requireSystemAdmin, requireSystemPermission } from "../middleware/requireSystemAdmin.js";
@@ -14,6 +14,7 @@ router.get("/users", requireSystemPermission("system.users.view"), getUsers);
 router.get("/users/:id", requireSystemPermission("system.users.view"), getUser);
 router.put("/users/:id", requireSystemPermission("system.users.manage"), putUser);
 router.get("/sales", requireSystemPermission("system.sales.view"), getSales);
+router.post("/sales/intake", requireSystemPermission("system.sales.manage"), postSaleIntake);
 router.get("/sales/:id", requireSystemPermission("system.sales.view"), getSale);
 router.post("/sales/:id/cancel", requireSystemPermission("system.sales.manage"), cancelSale);
 router.get("/listings", requireSystemPermission("system.listings.view"), getListings);
@@ -26,6 +27,8 @@ router.post("/actions/test", requireSystemPermission("system.actions.manage"), p
 router.put("/actions/:id/resolve", requireSystemPermission("system.actions.manage"), resolveAction);
 router.get("/automation/status", requireSystemPermission("system.actions.view"), getAutomationStatus);
 router.post("/automation/poll-mailbox", requireSystemPermission("system.actions.manage"), pollMailbox);
+router.get("/notification-settings", requireSystemPermission("system.notifications.view"), getNotificationSettings);
+router.put("/notification-settings", requireSystemPermission("system.notifications.manage"), putNotificationSettings);
 router.get("/support/tickets", requireSystemPermission("system.support.view"), getTickets);
 router.get("/support/tickets/:id", requireSystemPermission("system.support.view"), getTicket);
 router.post("/support/tickets/:id/messages", requireSystemPermission("system.support.manage"), replyToTicket);

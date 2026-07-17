@@ -67,7 +67,7 @@ function App() {
       <Route path="/system/actions" element={hasPermission(user, "system.actions.view") ? <SystemActionsPage /> : <Navigate to="/system/settings" replace />} />
       <Route path="/system/support" element={hasPermission(user, "system.support.view") ? <SystemSupportPage /> : <Navigate to="/system/settings" replace />} />
       <Route path="/system/maps" element={hasPermission(user, "system.maps.view") ? <SystemVenueMapsPage /> : <Navigate to="/system/settings" replace />} />
-      <Route path="/system/settings" element={(hasPermission(user, "system.marketplaces.view") || hasPermission(user, "system.team.view")) ? <SystemSettingsPage /> : <Navigate to="/system/users" replace />} />
+      <Route path="/system/settings" element={(hasPermission(user, "system.marketplaces.view") || hasPermission(user, "system.team.view") || hasPermission(user, "system.notifications.view")) ? <SystemSettingsPage /> : <Navigate to="/system/users" replace />} />
       <Route path="*" element={<Navigate to="/system/users" replace />} />
     </Route></Routes>;
   }

@@ -113,7 +113,7 @@ export type SystemSale = {
 export type ListingPublication = {
   id: number;
   marketplace: string;
-  status: "live" | "paused" | "pending" | "error";
+  status: "live" | "paused" | "pending" | "delete_pending" | "deleted" | "error";
   externalListingId: string | null;
   errorMessage: string | null;
   listingUrl: string | null;
@@ -187,7 +187,7 @@ export type PlatformAction = {
   resolvedAt: string | null;
 };
 
-export type AutomationStatus = { imap: boolean; smtp: boolean; discord: boolean };
+export type AutomationStatus = { imap: boolean; smtp: boolean; discord: boolean; pushover: boolean };
 
 export type SupportDashboard = {
   scope: "live" | "history";
@@ -200,6 +200,10 @@ export type SupportFilters = {
   from?: string;
   to?: string;
 };
+
+export type NotificationChannel = "email" | "discord" | "pushover";
+export type UserNotificationEvent = "new_sale" | "transfer_reminder" | "retransfer" | "payout_sent" | "listing_deleted" | "sale_sent";
+export type UserNotificationPreferences = Record<UserNotificationEvent, Record<NotificationChannel, boolean>>;
 
 export type ProfileSettings = {
   discordHandle: string;
@@ -229,6 +233,20 @@ export type ProfileSettings = {
   tikeyConnected: boolean;
   ticketmasterAccountsCsv: string;
   axsAccountsCsv: string;
+  notificationPreferences: UserNotificationPreferences;
+};
+
+export type SystemAdminNotificationSettings = {
+  events: Array<{ key: string; label: string; description: string }>;
+  channels: NotificationChannel[];
+  admins: Array<{
+    userId: number;
+    displayName: string;
+    email: string;
+    role: string;
+    connections: Record<NotificationChannel, boolean>;
+    preferences: Record<string, Record<NotificationChannel, boolean>>;
+  }>;
 };
 
 export type DashboardData = {

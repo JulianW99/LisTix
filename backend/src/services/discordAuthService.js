@@ -179,6 +179,11 @@ export const disconnectDiscordAccount = async ({ userId, accountId }) => {
       RETURNING provider_user_id
     `, [userId]);
     await client.query(`
+      UPDATE system_admin_notification_preferences
+      SET discord_enabled = FALSE, updated_at = NOW()
+      WHERE user_id = $1
+    `, [userId]);
+    await client.query(`
       UPDATE users
       SET profile_settings = COALESCE(profile_settings, '{}'::jsonb) - 'discordHandle' - 'discordUserId',
           updated_at = NOW()

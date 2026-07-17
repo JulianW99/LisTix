@@ -16,6 +16,7 @@ export const systemPermissions = [
   "system.marketplaces.view", "system.marketplaces.manage",
   "system.maps.view", "system.maps.manage",
   "system.team.view", "system.team.manage",
+  "system.notifications.view", "system.notifications.manage",
 ];
 
 export const systemRolePresets = {
@@ -24,15 +25,16 @@ export const systemRolePresets = {
     "system.users.view", "system.sales.view", "system.sales.manage",
     "system.listings.view", "system.actions.view", "system.actions.manage",
     "system.support.view", "system.support.manage", "system.marketplaces.view", "system.maps.view",
+    "system.notifications.view",
   ],
   support: [
     "system.users.view", "system.sales.view", "system.listings.view",
-    "system.actions.view", "system.support.view", "system.support.manage",
+    "system.actions.view", "system.support.view", "system.support.manage", "system.notifications.view",
   ],
   viewer: [
     "system.users.view", "system.sales.view", "system.listings.view",
     "system.payments.view", "system.actions.view", "system.support.view",
-    "system.marketplaces.view", "system.maps.view",
+    "system.marketplaces.view", "system.maps.view", "system.notifications.view",
   ],
 };
 

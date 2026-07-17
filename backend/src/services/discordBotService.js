@@ -64,6 +64,33 @@ const resolveSupportRoleId = async () => {
     : null;
 };
 
+export const sendDiscordDirectMessage = async ({ discordUserId, title, message, fields = [], color = 3066993 }) => {
+  if (!env.discord.botToken) return { status: "skipped", reason: "Discord bot token is not configured." };
+  if (!discordUserId) return { status: "skipped", reason: "The user has no connected Discord account." };
+  try {
+    const dm = await discordRequest("/users/@me/channels", {
+      method: "POST",
+      body: JSON.stringify({ recipient_id: discordUserId }),
+    });
+    await discordRequest(`/channels/${dm.id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({
+        embeds: [{
+          title: trim(title, 256),
+          description: trim(message, 4096),
+          color,
+          fields: fields.map((field) => ({ ...field, name: trim(field.name, 256), value: trim(field.value) })),
+          footer: { text: "LisTix Operations" },
+          timestamp: new Date().toISOString(),
+        }],
+      }),
+    });
+    return { status: "sent", channelId: dm.id };
+  } catch (error) {
+    return { status: "failed", reason: error.message };
+  }
+};
+
 export const sendSaleDirectMessage = async ({ discordUserId, sale }) => {
   if (!env.discord.botToken) return { status: "skipped", reason: "Discord bot token is not configured." };
   if (!discordUserId) return { status: "skipped", reason: "The user has no connected Discord account." };
@@ -103,15 +130,15 @@ export const sendDeadlinePassedDirectMessage = async ({ discordUserId, sale }) =
       method: "POST",
       body: JSON.stringify({
         embeds: [{
-          title: `Delivery deadline passed · ${sale.listixSaleId}`,
-          description: "The ticket delivery deadline has passed. Please transfer the tickets immediately and contact LisTix Operations if you need help.",
-          color: 15158332,
+          title: `Transfer required soon · ${sale.listixSaleId}`,
+          description: "The ticket delivery deadline is approaching. Please transfer the tickets before the deadline.",
+          color: 15105570,
           fields: [
             ...saleFields(sale),
             { name: "Delivery deadline", value: discordTimestamp(sale.deliveryDeadline), inline: false },
-            { name: "Required action", value: "Transfer the tickets now and send proof of delivery.", inline: false },
+            { name: "Required action", value: "Transfer the tickets before the deadline and send proof of delivery.", inline: false },
           ],
-          footer: { text: "LisTix Operations · Urgent delivery action" },
+          footer: { text: "LisTix Operations · Transfer reminder" },
           timestamp: new Date().toISOString(),
         }],
       }),

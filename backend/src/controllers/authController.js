@@ -105,6 +105,20 @@ export const updateMe = async (req, res, next) => {
         entityType: "account",
         entityId: req.user.accountId,
       });
+    } else if (req.user.systemAccess) {
+      const profileSettings = buildProfileSettings(req.body.profileSettings);
+      await client.query(`
+        UPDATE users
+        SET profile_settings = $1, updated_at = NOW()
+        WHERE id = $2
+      `, [JSON.stringify(profileSettings), req.user.sub]);
+      if (!profileSettings.pushoverUserKey) {
+        await client.query(`
+          UPDATE system_admin_notification_preferences
+          SET pushover_enabled = FALSE, updated_at = NOW()
+          WHERE user_id = $1
+        `, [req.user.sub]);
+      }
     }
 
     await client.query("COMMIT");

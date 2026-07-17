@@ -1,18 +1,15 @@
 import { pool } from "../db/pool.js";
 import { createRetransferChannel, sendDeadlinePassedDirectMessage, sendSaleDirectMessage } from "./discordBotService.js";
-import { sendOperationsEmail } from "./notificationService.js";
+import { deleteTicketListingsEverywhere } from "./marketplaceListingService.js";
 import { getPlatformSale, listPlatformSales } from "./platformAdminService.js";
+import { notifySystemAdmins } from "./systemAdminNotificationService.js";
+import { dispatchUserNotification } from "./userNotificationService.js";
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;",
 }[character]));
 const money = (value) => `€${Number(value ?? 0).toFixed(2)}`;
 const date = (value) => value ? new Date(value).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Berlin" }) : "Not provided";
-
-const getDiscordUserId = async (userId) => {
-  const result = await pool.query("SELECT provider_user_id FROM user_connections WHERE user_id = $1 AND provider = 'discord' LIMIT 1", [userId]);
-  return result.rows[0]?.provider_user_id ?? null;
-};
 
 const createAction = async ({ actionType, status, severity, sale, title, details, source, sourceReference }) => {
   if (sourceReference) {
@@ -27,14 +24,14 @@ const createAction = async ({ actionType, status, severity, sale, title, details
   return { id: Number(result.rows[0].id), duplicate: false };
 };
 
-const saveOutcome = async (actionId, notifications) => {
+const saveOutcome = async (actionId, notifications, workflow = {}) => {
   const discordChannelId = notifications.discord?.channelId ?? null;
   await pool.query(`
     UPDATE platform_actions
-    SET details = details || jsonb_build_object('notifications', $2::jsonb),
+    SET details = details || $2::jsonb,
         discord_channel_id = COALESCE($3, discord_channel_id), updated_at = NOW()
     WHERE id = $1
-  `, [actionId, JSON.stringify(notifications), discordChannelId]);
+  `, [actionId, JSON.stringify({ notifications, ...workflow }), discordChannelId]);
 };
 
 const saleEmail = (sale) => ({
@@ -50,17 +47,27 @@ const retransferEmail = (sale, buyer) => ({
 });
 
 const deadlineEmail = (sale) => ({
-  subject: `Delivery deadline passed · ${sale.listixSaleId}`,
-  text: `The delivery deadline for ${sale.eventName} has passed. Please transfer the tickets immediately and contact LisTix Operations if you need help.`,
-  html: `<h2>Delivery deadline passed</h2><p>The delivery deadline for <strong>${escapeHtml(sale.eventName)}</strong> has passed.</p><p>Please transfer the tickets immediately and contact LisTix Operations if you need help.</p>`,
+  subject: `Transfer required soon · ${sale.listixSaleId}`,
+  text: `The delivery deadline for ${sale.eventName} is approaching. Please transfer the tickets before ${date(sale.deliveryDeadline)}.`,
+  html: `<h2>Transfer required soon</h2><p>The delivery deadline for <strong>${escapeHtml(sale.eventName)}</strong> is approaching.</p><p>Please transfer the tickets before ${escapeHtml(date(sale.deliveryDeadline))}.</p>`,
+});
+
+const listingDeletedEmail = (sale, deletion) => ({
+  subject: `Listing deleted · ${sale.listingId}`,
+  text: `${sale.listingId} was removed from ${deletion.deletedCount} marketplace publication(s) after sale ${sale.listixSaleId}.`,
+  html: `<h2>Listing deleted</h2><p><strong>${escapeHtml(sale.listingId)}</strong> was removed from ${deletion.deletedCount} marketplace publication(s) after sale ${escapeHtml(sale.listixSaleId)}.</p>`,
 });
 
 export const runPlatformAction = async ({ actionType, sale, source = "system", sourceReference, details = {} }) => {
-  const normalizedType = actionType === "re-transfer" ? "retransfer" : actionType;
+  const normalizedType = {
+    "re-transfer": "retransfer",
+    delivery_deadline_passed: "transfer_reminder",
+    sale: "new_sale",
+  }[actionType] ?? actionType;
   const config = {
-    sale: { status: "completed", severity: "info", title: `Sale detected · ${sale.listixSaleId}` },
+    new_sale: { status: "completed", severity: "info", title: `Sale detected · ${sale.listixSaleId}` },
     retransfer: { status: "open", severity: "high", title: `Re-transfer required · ${sale.listixSaleId}` },
-    delivery_deadline_passed: { status: "open", severity: "critical", title: `Delivery deadline passed · ${sale.listixSaleId}` },
+    transfer_reminder: { status: "open", severity: "high", title: `Transfer required soon · ${sale.listixSaleId}` },
   }[normalizedType];
   if (!config) { const error = new Error("Unsupported platform action."); error.statusCode = 400; throw error; }
 
@@ -68,21 +75,74 @@ export const runPlatformAction = async ({ actionType, sale, source = "system", s
   const action = await createAction({ actionType: normalizedType, sale, ...config, details: { ...details, buyer }, source, sourceReference });
   if (action.duplicate) return { actionId: action.id, duplicate: true };
 
-  const discordUserId = await getDiscordUserId(sale.userId);
-  let email;
-  let discord;
-  if (normalizedType === "sale") {
-    email = await sendOperationsEmail({ to: sale.userEmail, ...saleEmail(sale) });
-    discord = await sendSaleDirectMessage({ discordUserId, sale });
+  let notifications;
+  let listingDeletion;
+  let listingDeletedNotifications;
+  if (normalizedType === "new_sale") {
+    listingDeletion = await deleteTicketListingsEverywhere({
+      ticketId: sale.ticketDatabaseId,
+      listingId: sale.listingId,
+      saleId: sale.databaseId,
+      marketplaceSaleId: sale.marketplaceSaleId,
+    });
+    notifications = await dispatchUserNotification({
+      eventType: "new_sale",
+      sale,
+      title: `New sale · ${sale.listixSaleId}`,
+      message: `Your tickets for ${sale.eventName} have sold. Delivery deadline: ${date(sale.deliveryDeadline)}.`,
+      email: saleEmail(sale),
+      discord: ({ discordUserId }) => sendSaleDirectMessage({ discordUserId, sale }),
+    });
+    if (listingDeletion.status === "completed") {
+      listingDeletedNotifications = await dispatchUserNotification({
+        eventType: "listing_deleted",
+        sale,
+        title: `Listing deleted · ${sale.listingId}`,
+        message: `${sale.listingId} was removed from ${listingDeletion.deletedCount} marketplace publication(s).`,
+        email: listingDeletedEmail(sale, listingDeletion),
+      });
+    }
   } else if (normalizedType === "retransfer") {
-    email = await sendOperationsEmail({ to: sale.userEmail, ...retransferEmail(sale, buyer) });
-    discord = await createRetransferChannel({ discordUserId, sale, buyer });
+    notifications = await dispatchUserNotification({
+      eventType: "retransfer",
+      sale,
+      title: `Re-transfer required · ${sale.listixSaleId}`,
+      message: `Please re-transfer the tickets for ${sale.eventName} to ${buyer.name || "the new buyer"}.`,
+      email: retransferEmail(sale, buyer),
+      discord: ({ discordUserId }) => createRetransferChannel({ discordUserId, sale, buyer }),
+    });
   } else {
-    email = await sendOperationsEmail({ to: sale.userEmail, ...deadlineEmail(sale) });
-    discord = await sendDeadlinePassedDirectMessage({ discordUserId, sale });
+    notifications = await dispatchUserNotification({
+      eventType: "transfer_reminder",
+      sale,
+      title: `Transfer required soon · ${sale.listixSaleId}`,
+      message: `The transfer deadline for ${sale.eventName} is ${date(sale.deliveryDeadline)}.`,
+      email: deadlineEmail(sale),
+      discord: ({ discordUserId }) => sendDeadlinePassedDirectMessage({ discordUserId, sale }),
+    });
   }
-  await saveOutcome(action.id, { email, discord });
-  return { actionId: action.id, duplicate: false, notifications: { email, discord } };
+  const mandatoryChannels = {
+    new_sale: ["email"],
+    retransfer: ["email", "discord"],
+    transfer_reminder: ["email"],
+  }[normalizedType] ?? [];
+  const failedMandatoryChannels = mandatoryChannels.filter((channel) => (
+    ["failed", "skipped"].includes(notifications[channel]?.status)
+  ));
+  if (failedMandatoryChannels.length) {
+    await notifySystemAdmins({
+      eventType: "notification_delivery_error",
+      title: `Mandatory notification failed · ${sale.listixSaleId}`,
+      message: `A mandatory ${normalizedType.replace(/_/g, " ")} notification could not be delivered.`,
+      details: {
+        saleId: sale.listixSaleId,
+        channels: failedMandatoryChannels.join(", "),
+        reasons: failedMandatoryChannels.map((channel) => notifications[channel]?.reason).filter(Boolean).join("; "),
+      },
+    }).catch((error) => console.error("Notification delivery alert failed:", error.message));
+  }
+  await saveOutcome(action.id, notifications, { listingDeletion, listingDeletedNotifications });
+  return { actionId: action.id, duplicate: false, notifications, listingDeletion, listingDeletedNotifications };
 };
 
 export const triggerPlatformTestAction = async ({ userId, actionType, saleId }) => {
@@ -132,16 +192,51 @@ export const getSaleForPlatformAction = getPlatformSale;
 
 export const detectPassedDeliveryDeadlines = async () => {
   const sales = await listPlatformSales();
-  const overdue = sales.filter((sale) => !sale.dispatchComplete && sale.deliveryDeadline && new Date(sale.deliveryDeadline) <= new Date());
+  const now = new Date();
+  const reminderCutoff = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const reminders = sales.filter((sale) => {
+    if (sale.dispatchComplete || !sale.deliveryDeadline) return false;
+    const deadline = new Date(sale.deliveryDeadline);
+    return deadline > now && deadline <= reminderCutoff;
+  });
   let created = 0;
-  for (const sale of overdue) {
+  for (const sale of reminders) {
     const result = await runPlatformAction({
-      actionType: "delivery_deadline_passed",
+      actionType: "transfer_reminder",
       sale,
       source: "deadline_monitor",
-      sourceReference: `deadline-${sale.databaseId}`,
+      sourceReference: `transfer-reminder-${sale.databaseId}-${new Date(sale.deliveryDeadline).toISOString()}`,
     });
     if (!result.duplicate) created += 1;
   }
-  return { checked: overdue.length, created };
+  const missedSales = sales.filter((sale) => (
+    !sale.dispatchComplete && sale.deliveryDeadline && new Date(sale.deliveryDeadline) <= now
+  ));
+  let missedCreated = 0;
+  for (const sale of missedSales) {
+    const action = await createAction({
+      actionType: "sale_not_sent",
+      status: "open",
+      severity: "critical",
+      sale,
+      title: `Sale not sent · ${sale.listixSaleId}`,
+      details: { deliveryDeadline: sale.deliveryDeadline },
+      source: "deadline_monitor",
+      sourceReference: `sale-not-sent-${sale.databaseId}-${new Date(sale.deliveryDeadline).toISOString()}`,
+    });
+    if (!action.duplicate) {
+      missedCreated += 1;
+      await notifySystemAdmins({
+        eventType: "sale_not_sent",
+        title: `Sale not sent · ${sale.listixSaleId}`,
+        message: `${sale.userName} has not marked the sale for ${sale.eventName} as sent.`,
+        details: {
+          saleId: sale.listixSaleId,
+          marketplaceSaleId: sale.marketplaceSaleId,
+          deadline: date(sale.deliveryDeadline),
+        },
+      }).catch((error) => console.error("Missed sale notification failed:", error.message));
+    }
+  }
+  return { checked: reminders.length, created, missed: missedSales.length, missedCreated };
 };

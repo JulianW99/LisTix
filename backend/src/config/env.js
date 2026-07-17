@@ -49,6 +49,9 @@ export const env = {
     fromName: process.env.MAIL_FROM_NAME || "LisTix Operations",
     fromAddress: process.env.MAIL_FROM_ADDRESS || process.env.SMTP_USER || "",
   },
+  pushover: {
+    applicationToken: process.env.PUSHOVER_APPLICATION_TOKEN || "",
+  },
   imap: {
     host: process.env.IMAP_HOST || "",
     port: Number(process.env.IMAP_PORT || 993),

@@ -1,4 +1,4 @@
-import type { ActivityItem, AutomationStatus, B2BEvent, B2BInquiry, CreateTicketInput, DashboardData, DiscordConnection, InvitationDetails, MarketplaceControls, PlatformAction, PointSummary, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemListing, SystemPaymentsData, SystemSale, SystemTeamConfiguration, SystemTeamMember, SystemUser, SystemUserDetails, SystemVenueMap, TeamConfiguration, TeamMember, TicketInputOptions, TicketItem, UpdateMeInput, UpdateTicketInput, User, VenueMapLayout, VenueMapTemplate } from "./types";
+import type { ActivityItem, AutomationStatus, B2BEvent, B2BInquiry, CreateTicketInput, DashboardData, DiscordConnection, InvitationDetails, MarketplaceControls, PlatformAction, PointSummary, SoldOrder, SupportDashboard, SupportFilters, SupportTicket, SupportTopic, SystemAdminNotificationSettings, SystemListing, SystemPaymentsData, SystemSale, SystemTeamConfiguration, SystemTeamMember, SystemUser, SystemUserDetails, SystemVenueMap, TeamConfiguration, TeamMember, TicketInputOptions, TicketItem, UpdateMeInput, UpdateTicketInput, User, VenueMapLayout, VenueMapTemplate } from "./types";
 
 const API_BASE_URL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL?.trim() || "/api";
 type ApiRequestOptions = Omit<RequestInit, "body"> & { body?: unknown };
@@ -68,6 +68,8 @@ export const api = {
   resolveSystemAction: (id: number) => request<{ item: PlatformAction }>(`/system-admin/actions/${id}/resolve`, { method: "PUT", body: {} }),
   automationStatus: () => request<AutomationStatus>("/system-admin/automation/status"),
   pollAutomationMailbox: () => request<{ processed?: number; skipped?: boolean }>("/system-admin/automation/poll-mailbox", { method: "POST", body: {} }),
+  systemNotificationSettings: () => request<SystemAdminNotificationSettings>("/system-admin/notification-settings"),
+  updateSystemNotificationSettings: (admins: SystemAdminNotificationSettings["admins"]) => request<SystemAdminNotificationSettings>("/system-admin/notification-settings", { method: "PUT", body: { admins } }),
   systemSupportTickets: (filters: SupportFilters) => request<{ items: SupportTicket[] }>(`/system-admin/support/tickets?${queryString(filters)}`),
   systemSupportTicket: (id: string | number) => request<{ item: SupportTicket }>(`/system-admin/support/tickets/${id}`),
   replyAsSystemAdmin: (id: string | number, text: string) => request<{ item: SupportTicket }>(`/system-admin/support/tickets/${id}/messages`, { body: { text } }),

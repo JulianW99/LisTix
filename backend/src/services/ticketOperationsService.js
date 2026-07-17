@@ -1,8 +1,10 @@
 import { pool } from "../db/pool.js";
 import { validateCreateTicketInput } from "../schemas/createTicketInputSchema.js";
 import { recordActivity } from "./accountAccessService.js";
+import { getPlatformSale } from "./platformAdminService.js";
 import { recordSalePoints, salePointDetails } from "./pointService.js";
 import { validateSplitType } from "./splitTypeService.js";
+import { dispatchUserNotification } from "./userNotificationService.js";
 
 const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -282,7 +284,7 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
   const result = isNumericIdentifier
     ? await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
+          SELECT id, ticket_code, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
           FROM tickets
           WHERE (id = $1 OR ticket_code = $2) AND account_id = $3
             AND marketplace_status_id <> (SELECT id FROM marketplace_statuses WHERE name = 'Deleted' LIMIT 1)
@@ -292,7 +294,7 @@ const getTicketDatabaseRow = async (client, identifier, user) => {
       )
     : await client.query(
         `
-          SELECT id, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
+          SELECT id, ticket_code, event_id, section_id, marketplace_status_id, restriction_id, restriction_ids, ticket_type, quantity, split_type
           FROM tickets
           WHERE ticket_code = $1 AND account_id = $2
             AND marketplace_status_id <> (SELECT id FROM marketplace_statuses WHERE name = 'Deleted' LIMIT 1)
@@ -653,6 +655,16 @@ export const deleteTicket = async (identifier, user) => {
       entityId: existingTicket.id,
     });
     await client.query("COMMIT");
+    await dispatchUserNotification({
+      eventType: "listing_deleted",
+      ticketId: existingTicket.id,
+      title: `Listing deleted · ${existingTicket.ticket_code}`,
+      message: `${existingTicket.ticket_code} was deleted from LisTix.`,
+      email: {
+        subject: `Listing deleted · ${existingTicket.ticket_code}`,
+        text: `${existingTicket.ticket_code} was deleted from LisTix.`,
+      },
+    }).catch((error) => console.error("Listing-deleted notification failed:", error.message));
     return true;
   } catch (error) {
     await client.query("ROLLBACK");
@@ -741,7 +753,27 @@ export const updateSoldOrder = async (identifier, payload, user) => {
       });
     }
     await client.query("COMMIT");
-    return getSoldOrderByIdentifier(existingOrder.databaseId, user);
+    const updatedOrder = await getSoldOrderByIdentifier(existingOrder.databaseId, user);
+    if (result.rows[0].is_terminal && !existingOrder.dispatchComplete) {
+      try {
+        const sale = await getPlatformSale(existingOrder.databaseId);
+        if (sale) {
+          await dispatchUserNotification({
+            eventType: "sale_sent",
+            sale,
+            title: `Sale sent · ${sale.listixSaleId}`,
+            message: `The tickets for ${sale.eventName} were marked as sent.`,
+            email: {
+              subject: `Sale sent · ${sale.listixSaleId}`,
+              text: `The tickets for ${sale.eventName} were marked as sent.`,
+            },
+          });
+        }
+      } catch (error) {
+        console.error("Sale-sent notification failed:", error.message);
+      }
+    }
+    return updatedOrder;
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;

@@ -210,6 +210,46 @@ marketplace and listing views show the paused state. Re-enabling restores only
 the publications and listings that were active before the pause; previous drafts
 and other states remain unchanged.
 
+### Sale intake, automatic delisting and notifications
+
+Incoming sales use one idempotent backend entry point. For the current authenticated
+system integration, call `POST /api/system-admin/sales/intake` with a normalized
+payload such as:
+
+```json
+{
+  "marketplace": "StubHub",
+  "marketplaceSaleId": "SH-12345",
+  "externalListingId": "STUBH-42",
+  "payoutAmount": 420,
+  "customerName": "Example Buyer",
+  "buyerEmail": "buyer@example.com",
+  "soldAt": "2026-07-17T10:00:00Z",
+  "deliveryDeadline": "2026-07-19T10:00:00Z"
+}
+```
+
+`ticketId` or `listingId` can be supplied instead of `externalListingId`. Duplicate
+marketplace sale IDs return the existing sale and do not create a second workflow.
+After intake, every publication belonging to the sold LisTix listing is moved through
+`delete_pending` to `deleted`, and the LisTix listing is soft-deleted. Provider APIs
+plug into `registerMarketplaceListingAdapter(marketplace, adapter)`; each adapter
+implements one idempotent `deleteListing(payload)` method. Until a provider adapter
+is registered, the local publication state is deleted and explicitly recorded with
+`apiConfigured: false` in the action outcome.
+
+Users configure notifications under Settings → Notifications. E-mail is mandatory
+for new sales, transfer reminders, re-transfers and payouts. Discord is additionally
+mandatory for re-transfers because it creates the private support ticket. Pushover
+cannot be enabled until a user key has been saved. The same dispatcher also supports
+optional listing-deleted and sale-sent notifications.
+
+System administrators configure error routing under System Settings. Only active
+system administrators are selectable; routing is stored per administrator, error
+type and channel. Marketplace synchronization failures, unexpected API/page errors,
+missed sale deadlines, notification delivery failures and payment errors share the
+same dispatch service for future integrations.
+
 Configure the backend variables in `backend/.env.example` to enable live
 automations:
 
@@ -234,7 +274,9 @@ automations:
   `DISCORD_COMPLETED_B2B_PURCHASE_CATEGORY_ID` configure the open and completed
   B2B purchase categories. The same administrator/Support-only confirmation,
   close and reopen controls are used for these tickets.
-- SMTP variables deliver sale, re-transfer, and missed-deadline emails.
+- SMTP variables deliver sale, re-transfer, and approaching-deadline emails.
+- `PUSHOVER_APPLICATION_TOKEN` enables Pushover delivery; every recipient supplies
+  their own Pushover user key in Settings.
 - IMAP variables poll the marketplace mailbox. A recognized re-transfer email is
   matched against both sale ID types, persisted in the action log, sent to the
   user, and opened as a Discord ticket.

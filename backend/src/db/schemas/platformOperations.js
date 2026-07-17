@@ -37,4 +37,11 @@ export const createPlatformOperationsTablesSql = `
     WHERE source_reference IS NOT NULL;
   CREATE INDEX IF NOT EXISTS platform_actions_status_idx ON platform_actions(status, detected_at DESC);
   CREATE INDEX IF NOT EXISTS listing_publications_ticket_idx ON listing_marketplace_publications(ticket_id);
+
+  ALTER TABLE listing_marketplace_publications
+    ADD COLUMN IF NOT EXISTS deletion_started_at TIMESTAMPTZ;
+  ALTER TABLE listing_marketplace_publications
+    ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
+  ALTER TABLE listing_marketplace_publications
+    ADD COLUMN IF NOT EXISTS deletion_reason VARCHAR(80);
 `;
