@@ -76,17 +76,18 @@ npm run dev
 
 Open [http://localhost:4173](http://localhost:4173). The API health endpoint is available at [http://127.0.0.1:4010/api/health](http://127.0.0.1:4010/api/health).
 
-The seeded admin credentials are controlled by `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `backend/.env`.
-In local development, the same credentials are prefilled on the login page via
-`VITE_DEMO_ADMIN_EMAIL` and `VITE_DEMO_ADMIN_PASSWORD`. Production builds leave
-the fields empty unless those variables are deliberately provided.
+The login form always opens with empty email and password fields. The seeded local
+credentials are:
 
-Additional demo accounts:
+- `admin@ticketadmin.local` / `A7!vN2@kR9-mT4_L8pW6xC3z`
+- `systemadmin@listix.local` / `S9@qL4!mV7-rK2_N6xT8pC5w`
+- `demo.alex@listix.local` / `X4!bR8@nK2-vM7_L9qT5pC6z`
+- `demo.jamie@listix.local` / `J6@wP3!tN8-rV4_K2mQ9xL7c`
+- `demo.taylor@listix.local` / `T8!zM5@qR2-vK9_L4nP7xC3w`
 
-- `demo.alex@listix.local` / `DemoUser123!`
-- `demo.jamie@listix.local` / `DemoUser123!`
-- `demo.taylor@listix.local` / `DemoUser123!`
-- `systemadmin@listix.local` / `SystemAdmin123!`
+The admin and system-admin credentials can be overridden with `ADMIN_EMAIL`,
+`ADMIN_PASSWORD`, `SYSTEM_ADMIN_EMAIL`, and `SYSTEM_ADMIN_PASSWORD` in
+`backend/.env`. These credentials are intended for local development only.
 
 Each demo account owns a different explicit set of listings. Sales reference those
 account-owned listings, and payments are derived only from the current account's

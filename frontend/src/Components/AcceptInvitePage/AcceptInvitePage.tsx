@@ -41,7 +41,7 @@ export function AcceptInvitePage() {
   };
 
   return <main className="invite-page">
-    <Link className="invite-brand" to="/"><span><img src="/branding/listix-icon.png" alt="" /></span>LisTix</Link>
+    <Link className="invite-brand" to="/"><span><img src="/branding/listix-icon-orange.png" alt="" /></span>LisTix</Link>
     <section className="invite-card">
       {loading ? <p className="muted">Loading invitation...</p> : accepted ? <>
         <span className="invite-icon success">✓</span>

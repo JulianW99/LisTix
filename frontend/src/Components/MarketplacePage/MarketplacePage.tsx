@@ -57,7 +57,7 @@ export function MarketplacePage({ embedded = false }: { embedded?: boolean }) {
   const submit = (event: FormEvent) => { event.preventDefault(); if (selectedListing) void createInquiry(selectedListing, quantity); };
 
   return <div className={`b2b-marketplace ${embedded ? "embedded" : "standalone"}`}>
-    {!embedded && <header className="b2b-nav"><Link to="/" className="b2b-brand"><img src="/branding/listix-logo.png" alt="LisTix" /></Link><div><span>Verified LisTix inventory</span>{user ? <button type="button" onClick={() => void logout()}>Log out</button> : <Link to="/login">Seller or buyer login</Link>}</div></header>}
+    {!embedded && <header className="b2b-nav"><Link to="/" className="b2b-brand"><img src="/branding/listix-logo-orange.png" alt="LisTix" /></Link><div><span>Verified LisTix inventory</span>{user ? <button type="button" onClick={() => void logout()}>Log out</button> : <Link to="/login">Seller or buyer login</Link>}</div></header>}
     <section className="b2b-hero">
       <div><span className="b2b-kicker">{embedded ? "LisTix B2B Marketplace" : "LisTix Ticket Marketplace"}</span><h1>Tickets ready for<br /><em>your next event.</em></h1><p>{embedded ? "Browse live LisTix inventory, choose your quantity and open a private Discord purchase ticket with our Support team." : "Browse available events and live LisTix inventory. Secure Stripe checkout will be available soon."}</p></div>
       <div className="b2b-hero-stats"><article><strong>{events.length}</strong><span>Available events</span></article><article><strong>{totalListings}</strong><span>Live listings</span></article><article><strong>{embedded ? "Private" : "Soon"}</strong><span>{embedded ? "Discord support" : "Stripe checkout"}</span></article></div>

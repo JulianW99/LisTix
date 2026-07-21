@@ -45,7 +45,7 @@ export function SystemAdminLayout({ user, onLogout }: { user: User; onLogout: ()
   const heading = titles[section] ?? titles.users;
   return <div className="system-layout">
     <aside className="system-sidebar">
-      <div className="system-brand"><span><img src="/branding/listix-icon.png" alt="" /></span><div><strong>LisTix Control</strong><small>System administration</small></div></div>
+      <div className="system-brand"><span><img src="/branding/listix-icon-orange.png" alt="" /></span><div><strong>LisTix Control</strong><small>System administration</small></div></div>
       <span className="system-nav-label">Platform</span>
       <nav aria-label="System administration">{navigation.filter((item) => item.to === "/system/settings"
         ? hasPermission(user, "system.marketplaces.view") || hasPermission(user, "system.team.view") || hasPermission(user, "system.notifications.view")

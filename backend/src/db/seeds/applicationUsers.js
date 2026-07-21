@@ -5,7 +5,7 @@ import { roles } from "../../config/constants.js";
 export const demoUserAccounts = [
   {
     email: "demo.alex@listix.local",
-    password: "DemoUser123!",
+    password: "X4!bR8@nK2-vM7_L9qT5pC6z",
     displayName: "Alex Morgan",
     role: roles.user,
     profileSettings: {
@@ -21,7 +21,7 @@ export const demoUserAccounts = [
   },
   {
     email: "demo.jamie@listix.local",
-    password: "DemoUser123!",
+    password: "J6@wP3!tN8-rV4_K2mQ9xL7c",
     displayName: "Jamie Keller",
     role: roles.user,
     profileSettings: {
@@ -36,7 +36,7 @@ export const demoUserAccounts = [
   },
   {
     email: "demo.taylor@listix.local",
-    password: "DemoUser123!",
+    password: "T8!zM5@qR2-vK9_L4nP7xC3w",
     displayName: "Taylor Reed",
     role: roles.user,
     profileSettings: {
@@ -92,6 +92,7 @@ export const seedApplicationUsers = async (
       INSERT INTO users (email, password_hash, display_name, role, profile_settings)
       VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (email) DO UPDATE SET display_name = EXCLUDED.display_name,
+        password_hash = EXCLUDED.password_hash,
         role = EXCLUDED.role,
         profile_settings = users.profile_settings || EXCLUDED.profile_settings,
         updated_at = NOW()

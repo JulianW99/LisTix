@@ -37,10 +37,10 @@ services:
       JWT_SECRET: ${JWT_SECRET:-local-development-secret-change-before-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:4173}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@ticketadmin.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-A7!vN2@kR9-mT4_L8pW6xC3z}
       ADMIN_DISPLAY_NAME: ${ADMIN_DISPLAY_NAME:-Platform Admin}
       SYSTEM_ADMIN_EMAIL: ${SYSTEM_ADMIN_EMAIL:-systemadmin@listix.local}
-      SYSTEM_ADMIN_PASSWORD: ${SYSTEM_ADMIN_PASSWORD:-SystemAdmin123!}
+      SYSTEM_ADMIN_PASSWORD: ${SYSTEM_ADMIN_PASSWORD:-S9@qL4!mV7-rK2_N6xT8pC5w}
       SYSTEM_ADMIN_DISPLAY_NAME: ${SYSTEM_ADMIN_DISPLAY_NAME:-LisTix System Admin}
       PUSHOVER_APPLICATION_TOKEN: ${PUSHOVER_APPLICATION_TOKEN:-}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
@@ -62,8 +62,6 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_PROXY_TARGET: http://backend:4010
-      VITE_DEMO_ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@ticketadmin.local}
-      VITE_DEMO_ADMIN_PASSWORD: ${ADMIN_PASSWORD:-ChangeMe123!}
     ports:
       - "4173:4173"
     depends_on:

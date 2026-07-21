@@ -63,12 +63,12 @@ export const env = {
   },
   adminUser: {
     email: process.env.ADMIN_EMAIL || "admin@ticketadmin.local",
-    password: process.env.ADMIN_PASSWORD || "ChangeMe123!",
+    password: process.env.ADMIN_PASSWORD || "A7!vN2@kR9-mT4_L8pW6xC3z",
     displayName: process.env.ADMIN_DISPLAY_NAME || "Platform Admin",
   },
   systemAdminUser: {
     email: process.env.SYSTEM_ADMIN_EMAIL || "systemadmin@listix.local",
-    password: process.env.SYSTEM_ADMIN_PASSWORD || "SystemAdmin123!",
+    password: process.env.SYSTEM_ADMIN_PASSWORD || "S9@qL4!mV7-rK2_N6xT8pC5w",
     displayName: process.env.SYSTEM_ADMIN_DISPLAY_NAME || "LisTix System Admin",
   },
   seedDemoData: parseBoolean(
