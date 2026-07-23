@@ -27,7 +27,7 @@ export function Sidebar({ user }: { user: User }) {
   ];
   return (
     <aside className="sidebar">
-      <div className="sidebar-brand"><span className="sidebar-mark"><img src="/branding/listix-icon-orange.png" alt="" /></span><div><strong>LisTix</strong><small>Operations</small></div></div>
+      <div className="sidebar-brand"><span className="sidebar-mark"><img src="/branding/listix-icon.png" alt="" /></span><div><strong>LisTix</strong><small>Operations</small></div></div>
       <nav className="sidebar-nav" aria-label="Primary navigation">
         {settingsMode ? settingsNavigation.map((item) => <a key={item.id} href={`#${item.id}`} className="sidebar-link">{item.label}</a>) : navigation.filter((item) => !item.permission || hasPermission(user, item.permission)).map((item) => <NavLink key={item.to} to={item.to} className={({ isActive }) => isActive ? "sidebar-link active" : "sidebar-link"}>{item.label}</NavLink>)}
       </nav>

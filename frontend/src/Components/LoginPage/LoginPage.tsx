@@ -20,7 +20,7 @@ export function LoginPage({ error, onLogin }: { error: string; onLogin: (email: 
   return <main className="login-page">
     <Link className="login-back" to="/">&larr; Back to LisTix</Link>
     <section className="login-panel panel">
-      <img className="login-logo" src="/branding/listix-logo-orange.png" alt="LisTix" />
+      <img className="login-logo" src="/branding/listix-logo.png" alt="LisTix" />
       <p className="eyebrow">LisTix</p>
       <h1>Operations login</h1>
       <p className="muted">Sign in to manage listings, sales and payouts.</p>

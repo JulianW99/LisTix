@@ -87,7 +87,7 @@ export function LandingPage() {
 
   return <div className="landing-page" ref={pageRef}>
     <header className="landing-nav">
-      <Link className="landing-brand" to="/" aria-label="LisTix home"><img src="/branding/listix-logo-orange.png" alt="LisTix" /></Link>
+      <Link className="landing-brand" to="/" aria-label="LisTix home"><img src="/branding/listix-logo.png" alt="LisTix" /></Link>
       <nav><a href="#features">Features</a><a href="#marketplaces">Marketplaces</a><a href="#security">Access</a></nav>
       <Link className="landing-login" to="/login">
         <svg className="landing-login-user" viewBox="0 0 24 24" aria-hidden="true">
@@ -115,7 +115,7 @@ export function LandingPage() {
         <div className="hero-visual">
           <div className="visual-glow" />
           <div className="visual-window" data-reveal="right">
-            <div className="visual-bar"><span className="visual-logo"><img src="/branding/listix-icon-orange.png" alt="" /></span><span>Operations overview</span><i>Live</i></div>
+            <div className="visual-bar"><span className="visual-logo"><img src="/branding/listix-icon.png" alt="" /></span><span>Operations overview</span><i>Live</i></div>
             <div className="visual-stats"><article><small>Active listings</small><strong>248</strong><span>+18 this week</span></article><article><small>Gross sales</small><strong>€84.2k</strong><span>12.8% margin</span></article></div>
             <div className="visual-chart"><div className="chart-heading"><span>Revenue velocity</span><small>Last 30 days</small></div><div className="visual-chart-bars">{[38, 58, 46, 72, 63, 88, 78, 96, 84, 110, 102, 126].map((height, index) => <i key={index} style={{ height }} />)}</div></div>
             <div className="visual-row"><span className="event-dot" /><div><strong>Coldplay · Munich</strong><small>2 tickets · Block L1</small></div><b>Listed</b><em>€410</em></div>
@@ -145,6 +145,6 @@ export function LandingPage() {
       </section>
     </main>
 
-    <footer className="landing-footer"><Link className="landing-brand" to="/" aria-label="LisTix home"><img src="/branding/listix-logo-orange.png" alt="LisTix" /></Link><p>Ticket operations, built to scale.</p><Link to="/login">Login</Link></footer>
+    <footer className="landing-footer"><Link className="landing-brand" to="/" aria-label="LisTix home"><img src="/branding/listix-logo.png" alt="LisTix" /></Link><p>Ticket operations, built to scale.</p><Link to="/login">Login</Link></footer>
   </div>;
 }
