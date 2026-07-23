@@ -18,6 +18,6 @@ export function UnlistedImagePage() {
   }, []);
 
   return <main className="unlisted-image-page">
-    <img src="/branding/julian_wehrig.jpg" alt="Julian Wehrig" />
+    <img src="/branding/jw.png" alt="Julian Wehrig" />
   </main>;
 }
