@@ -34,8 +34,9 @@
 .landing-nav nav { display: flex; gap: 34px; }
 .landing-nav nav a { color: #aeb1ad; font-size: .86rem; text-decoration: none; transition: color .2s; }
 .landing-nav nav a:hover { color: #fff; }
+.landing-login-group { justify-self: end; display: flex; align-items: center; gap: 14px; }
+.landing-tenant-label { color: #aeb1ad; font-size: .78rem; font-weight: 600; white-space: nowrap; }
 .landing-login {
-  justify-self: end;
   display: grid;
   grid-template-columns: 18px 1fr 9px;
   align-items: center;
@@ -185,7 +186,9 @@
   .landing-page { --landing-gutter: 18px; }
   .landing-nav { height: 76px; }
   .landing-brand img { width: 96px; height: 41px; }
-  .landing-login { padding-left: 14px; }
+  .landing-login-group { gap: 8px; }
+  .landing-tenant-label { font-size: .7rem; }
+  .landing-login { width: 120px; padding-left: 14px; }
   .landing-hero { min-height: auto; padding-top: 65px; }
   .hero-copy h1 { font-size: 3.15rem; }
   .hero-actions { align-items: stretch; flex-direction: column; }
@@ -207,6 +210,12 @@
 }
 @media (max-width: 430px) {
   .marketplace-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 350px) {
+  .landing-brand img { width: 82px; }
+  .landing-login-group { gap: 6px; }
+  .landing-tenant-label { font-size: .64rem; }
+  .landing-login { width: 105px; gap: 8px; padding: 0 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .landing-page { scroll-behavior: auto; }

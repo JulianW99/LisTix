@@ -89,16 +89,19 @@ export function LandingPage() {
     <header className="landing-nav">
       <Link className="landing-brand" to="/" aria-label="LisTix home"><img src="/branding/listix-logo.png" alt="LisTix" /></Link>
       <nav><a href="#features">Features</a><a href="#marketplaces">Marketplaces</a><a href="#security">Access</a></nav>
-      <Link className="landing-login" to="/login">
-        <svg className="landing-login-user" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="7" r="4" />
-          <path d="M4.5 20c.55-4.15 3.05-6.25 7.5-6.25s6.95 2.1 7.5 6.25H4.5Z" />
-        </svg>
-        <span>Login</span>
-        <svg className="landing-login-chevron" viewBox="0 0 12 20" aria-hidden="true">
-          <path d="m1 1 9 9-9 9" />
-        </svg>
-      </Link>
+      <div className="landing-login-group">
+        <span className="landing-tenant-label">Demo-Tenant</span>
+        <Link className="landing-login" to="/login">
+          <svg className="landing-login-user" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="7" r="4" />
+            <path d="M4.5 20c.55-4.15 3.05-6.25 7.5-6.25s6.95 2.1 7.5 6.25H4.5Z" />
+          </svg>
+          <span>Login</span>
+          <svg className="landing-login-chevron" viewBox="0 0 12 20" aria-hidden="true">
+            <path d="m1 1 9 9-9 9" />
+          </svg>
+        </Link>
+      </div>
     </header>
 
     <main>
