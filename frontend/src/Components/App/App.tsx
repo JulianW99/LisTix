@@ -1,5 +1,5 @@
 import { useState, type ReactElement } from "react";
-import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useApi } from "../../Context/ApiContext";
 import { hasPermission } from "../../Functions/hasPermission";
 import { AcceptInvitePage } from "../AcceptInvitePage/AcceptInvitePage";
@@ -27,11 +27,13 @@ import { SystemSettingsPage } from "../SystemSettingsPage/SystemSettingsPage";
 import { SystemUserDetailsPage } from "../SystemUserDetailsPage/SystemUserDetailsPage";
 import { SystemVenueMapsPage } from "../SystemVenueMapsPage/SystemVenueMapsPage";
 import { UserManagementPage } from "../UserManagementPage/UserManagementPage";
+import { UnlistedImagePage } from "../UnlistedImagePage/UnlistedImagePage";
 import "./App.css";
 
 function App() {
   const { user, initializing, login, logout } = useApi();
   const [error, setError] = useState("");
+  const location = useLocation();
   const navigate = useNavigate();
 
   const handleLogin = async (email: string, password: string) => {
@@ -44,6 +46,8 @@ function App() {
       throw requestError;
     }
   };
+
+  if (location.pathname === "/branding/jw") return <UnlistedImagePage />;
 
   if (initializing) return <LoadingScreen />;
 

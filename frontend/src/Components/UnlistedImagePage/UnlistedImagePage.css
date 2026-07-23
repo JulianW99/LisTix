@@ -1,0 +1,17 @@
+.unlisted-image-page {
+  align-items: center;
+  background: #050505;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0;
+}
+
+.unlisted-image-page img {
+  display: block;
+  height: auto;
+  max-height: 100vh;
+  max-width: 100%;
+  object-fit: contain;
+  width: auto;
+}
