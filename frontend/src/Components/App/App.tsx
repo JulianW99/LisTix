@@ -47,7 +47,12 @@ function App() {
     }
   };
 
-  if (location.pathname === "/branding/jw") return <UnlistedImagePage />;
+  if (location.pathname === "/branding/jw") {
+    return <UnlistedImagePage src="/branding/jw.png" alt="Julian Wehrig" title="Julian Wehrig" />;
+  }
+  if (location.pathname === "/branding/mail") {
+    return <UnlistedImagePage src="/branding/listix-mail-logo.png" alt="LisTix mail logo" title="LisTix Mail Logo" />;
+  }
 
   if (initializing) return <LoadingScreen />;
 

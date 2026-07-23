@@ -1,12 +1,18 @@
 import { useEffect } from "react";
 import "./UnlistedImagePage.css";
 
-export function UnlistedImagePage() {
+interface UnlistedImagePageProps {
+  alt: string;
+  src: string;
+  title: string;
+}
+
+export function UnlistedImagePage({ alt, src, title }: UnlistedImagePageProps) {
   useEffect(() => {
     const previousTitle = document.title;
     const robotsMeta = document.createElement("meta");
 
-    document.title = "Julian Wehrig";
+    document.title = title;
     robotsMeta.name = "robots";
     robotsMeta.content = "noindex, nofollow, noarchive";
     document.head.appendChild(robotsMeta);
@@ -15,9 +21,9 @@ export function UnlistedImagePage() {
       document.title = previousTitle;
       robotsMeta.remove();
     };
-  }, []);
+  }, [title]);
 
   return <main className="unlisted-image-page">
-    <img src="/branding/jw.png" alt="Julian Wehrig" />
+    <img src={src} alt={alt} />
   </main>;
 }
